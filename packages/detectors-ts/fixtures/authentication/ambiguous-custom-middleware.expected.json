@@ -1,0 +1,5 @@
+{
+  "verdict": "partial",
+  "reason_code": "unknown_middleware_only",
+  "evidence_contains": ["customThing", "unknown"]
+}

@@ -1,11 +1,21 @@
 // Re-export the canonical Detector interfaces from @attest/core.
-// @attest/detectors-ts only provides implementations; the contracts live in core
-// to avoid circular dependencies (verifier needs to call detectors at runtime).
 export type { Detector, DetectorContext, DetectorVerdict } from "@attest/core";
 
 import type { Detector } from "@attest/core";
+import { detectAuthentication } from "./authentication/index.js";
 
-/** Returns all registered detectors. Populated in subsequent commits. */
+const authenticationDetector: Detector = {
+  id: "authentication",
+  canHandle(claim) {
+    return (
+      claim.verification_contract.check === "behavior_present" &&
+      claim.verification_contract.params?.["property"] === "authentication"
+    );
+  },
+  run: detectAuthentication,
+};
+
+/** Returns all registered detectors. */
 export function registerDetectors(): Detector[] {
-  return [];
+  return [authenticationDetector];
 }

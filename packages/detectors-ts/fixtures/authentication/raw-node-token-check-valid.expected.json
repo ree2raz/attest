@@ -1,0 +1,5 @@
+{
+  "verdict": "verified",
+  "reason_code": null,
+  "evidence_contains": ["pre-route auth check", "Layer 3"]
+}

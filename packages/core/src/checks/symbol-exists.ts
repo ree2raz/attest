@@ -63,10 +63,12 @@ export function checkSymbolExists(
         evidence: [{ kind: "route", path, symbol, note: `route ${symbol} not found in file` }],
       };
     }
+    // No-note route summary entry (first) so human renderer falls through to
+    // Rule 3 (target fallback) rather than printing the framework detail note.
     return {
       claim_id,
       verdict: "verified",
-      evidence: [{ kind: "route", path, symbol, note: `${location.framework} route registration found` }],
+      evidence: [{ kind: "route", path, symbol }],
     };
   }
 

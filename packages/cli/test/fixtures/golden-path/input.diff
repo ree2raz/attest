@@ -1,0 +1,15 @@
+diff --git a/src/routes/auth.ts b/src/routes/auth.ts
+new file mode 100644
+index 0000000..abc1234
+--- /dev/null
++++ b/src/routes/auth.ts
+@@ -0,0 +1,8 @@
++import express from "express";
++
++export function unlistedHelper(): void {
++  // not in any claim
++}
++
++express().post("/login", (req, res) => {
++  res.json({ ok: true });
++});

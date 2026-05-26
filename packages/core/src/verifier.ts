@@ -219,5 +219,5 @@ export async function verify(input: VerifyInput): Promise<VerdictReport> {
 
   const undeclared: UndeclaredFinding[] = [...undeclaredFileFindings, ...undeclaredSymbolFindings];
 
-  return buildVerdictReport(manifestHash, claimResults, undeclared);
+  return buildVerdictReport(manifestHash, claimResults, undeclared, manifest);
 }

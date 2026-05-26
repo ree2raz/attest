@@ -1,0 +1,36 @@
+{
+  "manifest_hash": "sha256:089ffb9c82bc5d0312207280734b76c6c942f2a1e5499730139f17e88812403a",
+  "summary": {
+    "total_claims": 2,
+    "verified": 1,
+    "unverified": 1,
+    "partial": 0,
+    "unverifiable": 0,
+    "undeclared_files": 0,
+    "undeclared_symbols": 1
+  },
+  "claims": [
+    {
+      "claim_id": "c1",
+      "verdict": "verified",
+      "evidence": [
+        { "kind": "route", "path": "src/routes/auth.ts", "symbol": "POST /login" }
+      ]
+    },
+    {
+      "claim_id": "c2",
+      "verdict": "unverified",
+      "reason_code": "no_auth_in_chain",
+      "evidence": [
+        { "kind": "route", "path": "src/routes/auth.ts", "symbol": "POST /login" }
+      ]
+    }
+  ],
+  "undeclared": [
+    { "type": "symbol", "path": "src/routes/auth.ts", "symbol": "unlistedHelper" }
+  ],
+  "reviewer_focus": [
+    { "claim_id": "c2", "reason": "c2 failed — authentication not detected" },
+    { "undeclared": { "type": "symbol", "path": "src/routes/auth.ts", "symbol": "unlistedHelper" }, "reason": "undeclared change to `unlistedHelper`" }
+  ]
+}

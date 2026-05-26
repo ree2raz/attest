@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { Manifest } from "@attest/schema";
 import type { ClaimResult, UndeclaredFinding, VerdictReport } from "./types.js";
 
 /**
@@ -9,6 +10,45 @@ export function computeManifestHash(manifestRawBytes: Uint8Array): string {
   return `sha256:${hex}`;
 }
 
+function humanize(code: string): string {
+  return code.replace(/_/g, " ");
+}
+
+/**
+ * Builds the reviewer_focus reason string for a single claim result.
+ * Uses the spec §5.1 templates (applied verbatim in both JSON and human output).
+ */
+function buildClaimReason(claim: ClaimResult, manifest: Manifest): string {
+  const mc = manifest.claims.find((c) => c.id === claim.claim_id);
+  const vc = mc?.verification_contract;
+
+  // behavior_present template
+  if (vc?.check === "behavior_present") {
+    const property = vc.params?.["property"] as string | undefined;
+    const humanProp = property ? humanize(property) : "behavior";
+    return `${claim.claim_id} failed — ${humanProp} not detected`;
+  }
+
+  // Other check with reason_code
+  if (claim.reason_code) {
+    return `${claim.claim_id} — ${humanize(claim.reason_code)}`;
+  }
+
+  // Other check without reason_code
+  if (vc?.check) {
+    return `${claim.claim_id} — ${humanize(vc.check)} failed`;
+  }
+
+  return `${claim.claim_id} — check failed`;
+}
+
+function buildUndeclaredReason(item: UndeclaredFinding): string {
+  if (item.type === "symbol") {
+    return `undeclared change to \`${item.symbol ?? item.path}\``;
+  }
+  return `undeclared file ${item.path}`;
+}
+
 /**
  * Builds the reviewer_focus array per the spec ordering:
  *   1. Unverified/partial claims (in claim-id order)
@@ -17,61 +57,25 @@ export function computeManifestHash(manifestRawBytes: Uint8Array): string {
 export function buildReviewerFocus(
   claims: ClaimResult[],
   undeclared: UndeclaredFinding[],
+  manifest: Manifest,
 ): VerdictReport["reviewer_focus"] {
   const focus: VerdictReport["reviewer_focus"] = [];
 
   // 1. Unverified and partial claims, in claim-id order
   for (const claim of claims) {
     if (claim.verdict === "unverified" || claim.verdict === "partial") {
-      const reason = buildClaimReason(claim);
+      const reason = buildClaimReason(claim, manifest);
       focus.push({ claim_id: claim.claim_id, reason });
     }
   }
 
-  // 2. Undeclared items, path+symbol lexicographic order (already sorted by caller)
+  // 2. Undeclared items (already sorted by caller)
   for (const item of undeclared) {
     const reason = buildUndeclaredReason(item);
     focus.push({ undeclared: item, reason });
   }
 
   return focus;
-}
-
-function buildClaimReason(claim: ClaimResult): string {
-  if (claim.reason_code) {
-    return humanizeReasonCode(claim.reason_code, claim.evidence);
-  }
-  // Generic fallback: first non-empty note from evidence
-  for (const ev of claim.evidence) {
-    if (ev.note) return ev.note;
-  }
-  return `claim ${claim.claim_id} ${claim.verdict}`;
-}
-
-function humanizeReasonCode(code: string, evidence: ClaimResult["evidence"]): string {
-  switch (code) {
-    case "detector_not_implemented":
-      return "no detector registered for this behavioral property";
-    case "unsupported_check":
-      // Find the first non-empty note in evidence
-      for (const ev of evidence) {
-        if (ev.note) return ev.note;
-      }
-      return "check not supported for this target";
-    default:
-      // Detector-specific codes: scan evidence for first non-empty note
-      for (const ev of evidence) {
-        if (ev.note) return ev.note;
-      }
-      return code;
-  }
-}
-
-function buildUndeclaredReason(item: UndeclaredFinding): string {
-  if (item.type === "file") {
-    return `file ${item.path} changed but not covered by any claim`;
-  }
-  return `symbol ${item.symbol ?? "(unknown)"} in ${item.path} not covered by any claim`;
 }
 
 /**
@@ -81,6 +85,7 @@ export function buildVerdictReport(
   manifestHash: string,
   claims: ClaimResult[],
   undeclared: UndeclaredFinding[],
+  manifest: Manifest,
 ): VerdictReport {
   const verdicts = claims.map((c) => c.verdict);
   const summary = {
@@ -93,7 +98,7 @@ export function buildVerdictReport(
     undeclared_symbols: undeclared.filter((u) => u.type === "symbol").length,
   };
 
-  const reviewer_focus = buildReviewerFocus(claims, undeclared);
+  const reviewer_focus = buildReviewerFocus(claims, undeclared, manifest);
 
   return {
     manifest_hash: manifestHash,

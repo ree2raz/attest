@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/attest/claim-verification/v0.1",
+  "type": "object",
+  "required": ["schema_version", "session", "task", "claims"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "0.1" },
+    "session": {
+      "type": "object",
+      "required": [
+        "agent", "model", "session_id", "started_at", "completed_at",
+        "prompt_hash", "tool_calls_count", "files_touched"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "agent":            { "enum": ["claude-code", "codex", "cursor", "opencode", "other"] },
+        "model":            { "type": "string", "minLength": 1 },
+        "session_id":       { "type": "string", "format": "uuid" },
+        "started_at":       { "type": "string", "format": "date-time" },
+        "completed_at":     { "type": "string", "format": "date-time" },
+        "prompt_hash":      { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "tool_calls_count": { "type": "integer", "minimum": 0 },
+        "files_touched":    { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "task": {
+      "type": "object",
+      "required": ["summary", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "summary": { "type": "string", "maxLength": 120 },
+        "source":  { "enum": ["user_prompt", "issue_reference", "continuation"] }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/claim" }
+    }
+  },
+  "$defs": {
+    "claim": {
+      "type": "object",
+      "required": ["id", "type", "target", "description", "verification_contract"],
+      "additionalProperties": false,
+      "properties": {
+        "id":   { "type": "string", "pattern": "^c[0-9]+$" },
+        "type": {
+          "enum": [
+            "add_symbol", "remove_symbol", "modify_signature",
+            "modify_behavior", "add_test", "refactor",
+            "add_dependency", "remove_dependency", "config_change"
+          ]
+        },
+        "target": {
+          "type": "object",
+          "required": ["kind", "path"],
+          "additionalProperties": false,
+          "properties": {
+            "kind":   { "enum": ["function", "class", "type", "endpoint", "file", "module", "config_key", "package"] },
+            "path":   { "type": "string" },
+            "symbol": { "type": "string" }
+          }
+        },
+        "description": { "type": "string", "maxLength": 280 },
+        "verification_contract": {
+          "type": "object",
+          "required": ["check"],
+          "additionalProperties": false,
+          "properties": {
+            "check": {
+              "enum": [
+                "symbol_exists", "behavior_present", "test_covers",
+                "signature_matches", "removed", "cannot_verify"
+              ]
+            },
+            "params": { "type": "object" }
+          }
+        }
+      }
+    }
+  }
+}

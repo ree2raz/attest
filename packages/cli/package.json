@@ -1,0 +1,24 @@
+{
+  "name": "@attest/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "attest": "./dist/index.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "vitest": "^4.1.7"
+  },
+  "dependencies": {
+    "@attest/core": "workspace:*",
+    "@attest/detectors-ts": "workspace:*",
+    "@attest/schema": "workspace:*",
+    "clipanion": "^3.2.1"
+  }
+}

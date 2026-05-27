@@ -1,0 +1,7 @@
+set -e
+
+# Mirror the CI gate so anything that passes locally passes in CI.
+# Build must run before test: the CLI golden-path e2e spawns the built dist/.
+pnpm lint
+pnpm build
+pnpm test

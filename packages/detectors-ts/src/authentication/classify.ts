@@ -1,4 +1,4 @@
-import { SyntaxKind, type SourceFile, type Node } from "ts-morph";
+import { type SourceFile } from "ts-morph";
 import type { Classification } from "./types.js";
 
 // Layer 1 — Name match
@@ -104,20 +104,6 @@ function layer2Import(name: string, sourceFile: SourceFile): Classification | nu
     if (isAuthPackage(moduleSpec)) return "auth";
   }
   return null;
-}
-
-/**
- * Checks if a node's text contains a JWT verify call.
- */
-function bodyHasJwtVerify(node: Node): boolean {
-  const text = node.getText();
-  return (
-    /jwt\.verify\s*\(/.test(text) ||
-    /jwtVerify\s*\(/.test(text) ||
-    /jwtDecrypt\s*\(/.test(text) ||
-    /jsonwebtoken\.verify\s*\(/.test(text) ||
-    /jose\.jwtVerify\s*\(/.test(text)
-  );
 }
 
 /**

@@ -1,4 +1,4 @@
-import type { VerdictReport, ClaimResult, UndeclaredFinding } from "@attest/core";
+import type { VerdictReport, ClaimResult } from "@attest/core";
 import type { Manifest } from "@attest/schema";
 
 // ─── ANSI helpers ─────────────────────────────────────────────────────────

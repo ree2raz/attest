@@ -6,7 +6,6 @@ import { verify } from "../src/verifier.js";
 import type { Manifest } from "@attest/schema";
 import { parseDiffContent } from "../src/diff.js";
 
-const __filename = fileURLToPath(import.meta.url);
 const __dirname = join(fileURLToPath(import.meta.url), "..");
 const FIXTURES_DIR = join(__dirname, "fixtures", "basic");
 

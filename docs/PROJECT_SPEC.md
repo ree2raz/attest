@@ -177,8 +177,7 @@ attest/
 ├── .prettierrc
 ├── README.md
 ├── CONTRIBUTING.md
-├── LICENSE                         # Apache-2.0
-└── SESSION_REPORT.md               # agent writes this when finished
+└── LICENSE                         # Apache-2.0
 ```
 
 ---
@@ -427,7 +426,6 @@ Every item below must be green before v0.1 is considered shipped.
 - [ ] CONTRIBUTING.md covers: how to add a detector, how to add a fixture, commit conventions
 - [ ] LICENSE is Apache-2.0
 - [ ] CI workflow runs `pnpm lint && pnpm test && pnpm build` on every push and PR
-- [ ] SESSION_REPORT.md documents what shipped, ambiguities encountered, and open questions
 
 ---
 
@@ -481,7 +479,7 @@ v0.1 freezes the schema shape defined in `SCHEMA_V0.1.md`. Any field addition or
 
 1. Re-read the relevant spec section.
 2. If still ambiguous, STOP. Do not guess.
-3. Write the ambiguity into `SESSION_REPORT.md` under "Open Questions".
-4. Choose the most conservative interpretation (the one that rejects more inputs, constrains more behavior, narrows scope) and proceed, flagging the choice in `SESSION_REPORT.md`.
+3. Surface the ambiguity to the user under "Open Questions" before proceeding.
+4. Choose the most conservative interpretation (the one that rejects more inputs, constrains more behavior, narrows scope) and proceed, flagging the choice to the user.
 
 The single worst failure mode is the agent silently making design decisions. The second worst is stalling. Conservative-and-documented beats both.

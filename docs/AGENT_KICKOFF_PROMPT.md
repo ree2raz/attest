@@ -67,7 +67,7 @@ Proceed in this order. Do not start the next step until the previous is complete
 3. Implement `@attest/core` except detector routing. This includes the diff parser, the undeclared-changes detector, the verdict aggregator, and the `verify` function skeleton that currently returns `unverifiable` for every claim. Write tests for diff parsing and undeclared-changes logic.
 4. Implement `@attest/detectors-ts` with the authentication detector. Build per-framework modules (express, fastify, nestjs, koa, raw-node), the three-layer classifier (heuristics.ts), and wire it into the core's detector registry. Write ALL 17 fixtures from `DETECTOR_AUTHENTICATION_SPEC.md` §7 and their expected-output companions. Fixture tests must pass.
 5. Implement `@attest/cli`. Build the `verify` command with clipanion, the human renderer, the JSON renderer. Write the golden-path end-to-end test from `CLI_V01_SPEC.md` §7.
-6. Write README, CONTRIBUTING, LICENSE (MIT), and the GitHub Actions CI workflow.
+6. Write README, CONTRIBUTING, LICENSE (Apache-2.0), and the GitHub Actions CI workflow.
 7. Run `pnpm lint && pnpm test && pnpm build` at the repo root. Fix anything red.
 8. Write `SESSION_REPORT.md` summarizing what shipped, ambiguities hit, decisions made, open questions, and known limitations.
 
@@ -106,7 +106,7 @@ Report completion by pasting the output of `pnpm test` and the contents of `SESS
 
 ## One final rule
 
-If at any point you find yourself writing code that is not required by the specs — stop. Delete it. The specs are minimal on purpose. Expanding scope without approval is the single highest-probability way this project fails. You are welcome (and expected) to flag places where the specs *could* be improved in `SESSION_REPORT.md`, but do not unilaterally improve them in code.
+If at any point you find yourself writing code that is not required by the specs — stop. Delete it. The specs are minimal on purpose. Expanding scope without approval is the single highest-probability way this project fails. You are welcome (and expected) to flag places where the specs _could_ be improved in `SESSION_REPORT.md`, but do not unilaterally improve them in code.
 
 Begin by reading the four specs and replying with your acknowledgement.
 

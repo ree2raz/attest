@@ -2,7 +2,7 @@
 
 > Closes the gap between what an AI coding agent claims it changed and what it actually changed.
 
-`attest` is a deterministic, locally-runnable CLI tool. An AI agent emits a structured JSON manifest describing its changes; `attest verify` checks each claim against the actual diff and produces a structured verdict. No LLM in the verification path. No SaaS dependency. MIT licensed.
+`attest` is a deterministic, locally-runnable CLI tool. An AI agent emits a structured JSON manifest describing its changes; `attest verify` checks each claim against the actual diff and produces a structured verdict. No LLM in the verification path. No SaaS dependency. Apache-2.0 licensed.
 
 ## Install (v0.1 — repo-local)
 
@@ -23,6 +23,7 @@ attest verify \
 ```
 
 Output:
+
 ```
 🤖 Agent: claude-code (claude-opus-4-7) · 5 tool calls · 1 files touched
 📝 Task: Add login endpoint
@@ -51,9 +52,9 @@ See [docs/SCHEMA_V0.1.md](docs/SCHEMA_V0.1.md) for the full manifest specificati
 
 ## Packages
 
-| Package | Description |
-|---|---|
-| `@attest/schema` | JSON Schema, TypeScript types, ajv validator |
-| `@attest/core` | Verifier orchestration, diff parser, undeclared-changes detector |
-| `@attest/detectors-ts` | TypeScript authentication detector |
-| `@attest/cli` | `attest verify` command |
+| Package                | Description                                                      |
+| ---------------------- | ---------------------------------------------------------------- |
+| `@attest/schema`       | JSON Schema, TypeScript types, ajv validator                     |
+| `@attest/core`         | Verifier orchestration, diff parser, undeclared-changes detector |
+| `@attest/detectors-ts` | TypeScript authentication detector                               |
+| `@attest/cli`          | `attest verify` command                                          |

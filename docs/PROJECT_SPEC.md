@@ -13,6 +13,7 @@ Companion specs: `SCHEMA_V0.1.md`, `DETECTOR_AUTHENTICATION_SPEC.md`, `CLI_V01_S
 **Rationale**: The agent attests to its changes via structured claims; `attest` verifies those attestations against the actual diff. Short, one syllable, semantic precision, and rides the existing "attestation" idiom in software supply-chain security (SLSA, in-toto, sigstore) without conflicting with it — different layer of the stack.
 
 **Namespace availability check (MANDATORY before first commit)**:
+
 - npm: `attest` as an org scope (`@attest/*`)
 - GitHub: `github.com/attest`
 - Fallback if taken: `attestly` (org scope `@attestly/*`, `github.com/attestly`)
@@ -23,7 +24,7 @@ If the primary name is unavailable, apply the fallback globally. Do not mix.
 
 ## 2. Mission (one paragraph)
 
-`attest` closes the gap between what an AI coding agent claims it did and what it actually did. The agent declares structured claims; `attest` verifies each claim deterministically against the diff; a human reviewer reads one report that tells them exactly where to focus. No LLM judgment in the verification path. No SaaS dependency. Open source, MIT, locally runnable.
+`attest` closes the gap between what an AI coding agent claims it did and what it actually did. The agent declares structured claims; `attest` verifies each claim deterministically against the diff; a human reviewer reads one report that tells them exactly where to focus. No LLM judgment in the verification path. No SaaS dependency. Open source, Apache-2.0, locally runnable.
 
 ---
 
@@ -46,7 +47,7 @@ If the primary name is unavailable, apply the fallback globally. Do not mix.
 3. `@attest/detectors-ts` — TypeScript-language detectors (authentication only in v0.1)
 4. `@attest/cli` — command-line tool: manifest + diff in, verdict out
 5. Fixture suite for the authentication detector (≥17 fixtures, specified in `DETECTOR_AUTHENTICATION_SPEC.md` §7)
-6. README, CONTRIBUTING, LICENSE (MIT), CI workflow
+6. README, CONTRIBUTING, LICENSE (Apache-2.0), CI workflow
 
 ### OUT (deferred, do not build)
 
@@ -54,7 +55,7 @@ If the primary name is unavailable, apply the fallback globally. Do not mix.
 - GitHub App / PR comment renderer (v0.3)
 - Nine remaining behavioral detectors (`input_validation`, `error_handling`, etc.) — v0.2+
 - Python-language detectors — v0.2+
-- Test execution (we check test *presence*, never *behavior*)
+- Test execution (we check test _presence_, never _behavior_)
 - Pre-declaration / TDD-style flow — v0.2+
 - Multi-session provenance chaining — v0.2+
 - Published npm packages — v0.2+ (v0.1 is repo-local usable via `pnpm build && pnpm link`)
@@ -68,24 +69,24 @@ If the primary name is unavailable, apply the fallback globally. Do not mix.
 
 These decisions are final for v0.1. Do not introduce alternatives without a spec revision.
 
-| Concern              | Choice                              | Rationale                                                 |
-|----------------------|-------------------------------------|-----------------------------------------------------------|
-| Language             | TypeScript 5.4+                     | Target language, native                                   |
-| Module system        | ESM only                            | Modern, forward-compatible                                |
-| Runtime              | Node.js 20 LTS or newer             | Maintained LTS, native ESM, fetch, test runner available  |
-| Package manager      | pnpm 9+                             | Fast, first-class workspaces, strict dependency isolation |
-| AST library          | `ts-morph`                          | Object-oriented API over TS compiler; agent-friendly      |
-| JSON Schema          | `ajv` + `ajv-formats`               | Fastest, most widely adopted                              |
-| Diff parsing         | `parse-diff`                        | Battle-tested unified-diff parser                         |
-| Test framework       | `vitest`                            | Fast, TS-native, ESM-native                               |
-| Linter               | `eslint` + `@typescript-eslint`     | Standard                                                  |
-| Formatter            | `prettier`                          | Standard                                                  |
-| CLI framework        | `clipanion`                         | Typed, class-based, validates args at compile time        |
-| Build (libraries)    | `tsc`                               | Canonical                                                 |
-| Build (CLI bin)      | `tsup`                              | Single-file bundle for `#!/usr/bin/env node` entrypoint   |
-| Release management   | `changesets`                        | Semver discipline from day one                            |
-| CI                   | GitHub Actions                      | Free, standard                                            |
-| Coverage             | `@vitest/coverage-v8`               | vitest coverage provider; required for ≥85% gate         |
+| Concern            | Choice                          | Rationale                                                 |
+| ------------------ | ------------------------------- | --------------------------------------------------------- |
+| Language           | TypeScript 5.4+                 | Target language, native                                   |
+| Module system      | ESM only                        | Modern, forward-compatible                                |
+| Runtime            | Node.js 20 LTS or newer         | Maintained LTS, native ESM, fetch, test runner available  |
+| Package manager    | pnpm 9+                         | Fast, first-class workspaces, strict dependency isolation |
+| AST library        | `ts-morph`                      | Object-oriented API over TS compiler; agent-friendly      |
+| JSON Schema        | `ajv` + `ajv-formats`           | Fastest, most widely adopted                              |
+| Diff parsing       | `parse-diff`                    | Battle-tested unified-diff parser                         |
+| Test framework     | `vitest`                        | Fast, TS-native, ESM-native                               |
+| Linter             | `eslint` + `@typescript-eslint` | Standard                                                  |
+| Formatter          | `prettier`                      | Standard                                                  |
+| CLI framework      | `clipanion`                     | Typed, class-based, validates args at compile time        |
+| Build (libraries)  | `tsc`                           | Canonical                                                 |
+| Build (CLI bin)    | `tsup`                          | Single-file bundle for `#!/usr/bin/env node` entrypoint   |
+| Release management | `changesets`                    | Semver discipline from day one                            |
+| CI                 | GitHub Actions                  | Free, standard                                            |
+| Coverage           | `@vitest/coverage-v8`           | vitest coverage provider; required for ≥85% gate          |
 
 No other dependencies may be added without explicit spec revision. If the agent believes a dependency is required, it must stop and ask — not silently introduce.
 
@@ -176,7 +177,7 @@ attest/
 ├── .prettierrc
 ├── README.md
 ├── CONTRIBUTING.md
-├── LICENSE                         # MIT
+├── LICENSE                         # Apache-2.0
 └── SESSION_REPORT.md               # agent writes this when finished
 ```
 
@@ -207,23 +208,53 @@ export type SchemaVersion = "0.1";
 export type AgentId = "claude-code" | "codex" | "cursor" | "opencode" | "other";
 export type TaskSource = "user_prompt" | "issue_reference" | "continuation";
 export type ClaimType =
-  | "add_symbol" | "remove_symbol" | "modify_signature"
-  | "modify_behavior" | "add_test" | "refactor"
-  | "add_dependency" | "remove_dependency" | "config_change";
+  | "add_symbol"
+  | "remove_symbol"
+  | "modify_signature"
+  | "modify_behavior"
+  | "add_test"
+  | "refactor"
+  | "add_dependency"
+  | "remove_dependency"
+  | "config_change";
 export type CheckKind =
-  | "symbol_exists" | "behavior_present" | "test_covers"
-  | "signature_matches" | "removed" | "cannot_verify";
+  | "symbol_exists"
+  | "behavior_present"
+  | "test_covers"
+  | "signature_matches"
+  | "removed"
+  | "cannot_verify";
 export type BehavioralProperty =
-  | "null_check" | "input_validation" | "error_handling"
-  | "authentication" | "authorization" | "rate_limiting"
-  | "logging" | "sanitization" | "timeout" | "retry_logic"
+  | "null_check"
+  | "input_validation"
+  | "error_handling"
+  | "authentication"
+  | "authorization"
+  | "rate_limiting"
+  | "logging"
+  | "sanitization"
+  | "timeout"
+  | "retry_logic"
   | "cannot_express";
 export type TargetKind =
-  | "function" | "class" | "type" | "endpoint"
-  | "file" | "module" | "config_key" | "package";
+  | "function"
+  | "class"
+  | "type"
+  | "endpoint"
+  | "file"
+  | "module"
+  | "config_key"
+  | "package";
 
-export interface Target { kind: TargetKind; path: string; symbol?: string; }
-export interface VerificationContract { check: CheckKind; params?: Record<string, unknown>; }
+export interface Target {
+  kind: TargetKind;
+  path: string;
+  symbol?: string;
+}
+export interface VerificationContract {
+  check: CheckKind;
+  params?: Record<string, unknown>;
+}
 export interface Claim {
   id: string;
   type: ClaimType;
@@ -231,8 +262,13 @@ export interface Claim {
   description: string;
   verification_contract: VerificationContract;
 }
-export interface Session { /* mirror SCHEMA_V0.1.md §2 */ }
-export interface Task { summary: string; source: TaskSource; }
+export interface Session {
+  /* mirror SCHEMA_V0.1.md §2 */
+}
+export interface Task {
+  summary: string;
+  source: TaskSource;
+}
 export interface Manifest {
   schema_version: SchemaVersion;
   session: Session;
@@ -241,9 +277,15 @@ export interface Manifest {
 }
 
 // Validator
-export interface ValidationError { path: string; code: string; message: string; }
+export interface ValidationError {
+  path: string;
+  code: string;
+  message: string;
+}
 export interface Validator {
-  validate(input: unknown): { ok: true; manifest: Manifest } | { ok: false; errors: ValidationError[] };
+  validate(
+    input: unknown,
+  ): { ok: true; manifest: Manifest } | { ok: false; errors: ValidationError[] };
 }
 export function createValidator(): Validator;
 ```
@@ -258,15 +300,20 @@ export type Verdict = "verified" | "unverified" | "partial" | "unverifiable";
 // Core-level reason codes — emitted by verifier routing, not by detectors.
 // Detector-level reason codes are enumerated in DETECTOR_AUTHENTICATION_SPEC.md §10.
 export type CoreReasonCode =
-  | "detector_not_implemented"   // behavior_present claim; no detector registered for that property
-  | "unsupported_check";         // check kind not yet implemented or incompatible with target kind
+  | "detector_not_implemented" // behavior_present claim; no detector registered for that property
+  | "unsupported_check"; // check kind not yet implemented or incompatible with target kind
 
-export interface Evidence { kind: string; path?: string; symbol?: string; note?: string; }
+export interface Evidence {
+  kind: string;
+  path?: string;
+  symbol?: string;
+  note?: string;
+}
 
 export interface ClaimResult {
   claim_id: string;
   verdict: Verdict;
-  reason_code?: string;           // CoreReasonCode or a detector reason code
+  reason_code?: string; // CoreReasonCode or a detector reason code
   evidence: Evidence[];
 }
 
@@ -292,12 +339,19 @@ export interface VerdictReport {
   reviewer_focus: Array<{ claim_id?: string; undeclared?: UndeclaredFinding; reason: string }>;
 }
 
-export interface DiffChange { path: string; kind: "added" | "modified" | "deleted"; post_content?: string; hunks: unknown[]; }
-export interface DiffSet { changes: DiffChange[]; }
+export interface DiffChange {
+  path: string;
+  kind: "added" | "modified" | "deleted";
+  post_content?: string;
+  hunks: unknown[];
+}
+export interface DiffSet {
+  changes: DiffChange[];
+}
 
 export interface VerifyInput {
   manifest: Manifest;
-  manifestRawBytes: Uint8Array;   // raw bytes of the manifest file; core computes manifest_hash from this
+  manifestRawBytes: Uint8Array; // raw bytes of the manifest file; core computes manifest_hash from this
   diff: DiffSet;
   repoRoot: string;
 }
@@ -323,8 +377,8 @@ export interface DetectorVerdict {
 }
 
 export interface Detector {
-  id: string;                              // e.g. "ts.behavior.authentication"
-  canHandle(claim: Claim): boolean;        // routing gate
+  id: string; // e.g. "ts.behavior.authentication"
+  canHandle(claim: Claim): boolean; // routing gate
   run(claim: Claim, ctx: DetectorContext): Promise<DetectorVerdict>;
 }
 
@@ -345,6 +399,7 @@ export function registerDetectors(): Detector[];
 The CLI accepts **unified diff** format (the output of `git diff` or `git format-patch` single-commit). v0.1 does not read git history directly; the diff is passed as a file or stdin.
 
 **Expected invariants**:
+
 - Paths in the diff are relative to `--repo-root`.
 - Only textual files are handled. Binary files in the diff are ignored with a warning.
 - Post-diff content is resolved by **reading the file from disk at `repoRoot/path`** — the working tree is assumed to be in post-diff state when `attest verify` runs. The diff is used only to enumerate changed files and determine change kind (`added | modified | deleted`); it is never applied programmatically to reconstruct content. A deleted file (absent from disk) causes content-dependent checks to return `unverifiable`. See `CORE_CHECKS_SPEC.md §6` for the full resolution rules.
@@ -370,7 +425,7 @@ Every item below must be green before v0.1 is considered shipped.
 - [ ] `pnpm build` produces dist/ artifacts in every package
 - [ ] README.md covers: what it is, install, basic `attest verify` example, link to SCHEMA_V0.1.md
 - [ ] CONTRIBUTING.md covers: how to add a detector, how to add a fixture, commit conventions
-- [ ] LICENSE is MIT
+- [ ] LICENSE is Apache-2.0
 - [ ] CI workflow runs `pnpm lint && pnpm test && pnpm build` on every push and PR
 - [ ] SESSION_REPORT.md documents what shipped, ambiguities encountered, and open questions
 
@@ -410,7 +465,7 @@ Every item below must be green before v0.1 is considered shipped.
 - Not a coverage tool. Defer to c8, istanbul, Codecov.
 - Not a style enforcer. Defer to eslint, prettier.
 - Not a hosted service. No backend, no auth, no accounts.
-- Not a replacement for human review. The output is a *focus directive*, not an approval signal.
+- Not a replacement for human review. The output is a _focus directive_, not an approval signal.
 
 ---
 

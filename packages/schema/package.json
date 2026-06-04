@@ -10,7 +10,9 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && cp src/manifest.schema.json dist/manifest.schema.json",
     "test": "vitest run",

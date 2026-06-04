@@ -72,11 +72,7 @@ function evidenceSummary(claim: ClaimResult, manifest: Manifest): string {
 
 // ─── Main renderer ─────────────────────────────────────────────────────────
 
-export function renderHuman(
-  report: VerdictReport,
-  manifest: Manifest,
-  useColor: boolean,
-): string {
+export function renderHuman(report: VerdictReport, manifest: Manifest, useColor: boolean): string {
   const lines: string[] = [];
   const { session, task } = manifest;
 

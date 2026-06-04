@@ -33,6 +33,7 @@ Follow conventional commits: `feat(scope): message`, `fix(scope): message`, `tes
 Scope is the package short name: `schema`, `core`, `detectors-ts`, `cli`.
 
 Examples:
+
 - `feat(schema): add ajv validator`
 - `test(detectors-ts): add express fixtures`
 - `fix(core): handle deleted files in undeclared detection`

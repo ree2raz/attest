@@ -9,7 +9,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // Read version from package.json
 let version = "0.1.0";
 try {
-  const pkg = JSON.parse(readFileSync(join(__dirname, "..", "package.json"), "utf-8")) as { version?: string };
+  const pkg = JSON.parse(readFileSync(join(__dirname, "..", "package.json"), "utf-8")) as {
+    version?: string;
+  };
   version = pkg.version ?? "0.1.0";
 } catch {
   // fallback

@@ -4,7 +4,11 @@ import { Project } from "ts-morph";
 import type { Claim } from "@attest/schema";
 import type { VerifyInput, VerdictReport, ClaimResult, UndeclaredFinding } from "./types.js";
 import { computeManifestHash, buildVerdictReport } from "./verdict.js";
-import { computeUndeclaredFiles, computeUndeclaredSymbols, buildCoveredSymbolSet } from "./undeclared.js";
+import {
+  computeUndeclaredFiles,
+  computeUndeclaredSymbols,
+  buildCoveredSymbolSet,
+} from "./undeclared.js";
 import { checkCannotVerify } from "./checks/cannot-verify.js";
 import { checkSymbolExists } from "./checks/symbol-exists.js";
 import { checkRemoved } from "./checks/removed.js";
@@ -19,9 +23,7 @@ function validateFilesTouched(repoRoot: string, filesTouched: readonly string[])
   for (const filePath of filesTouched) {
     const resolved = resolve(normalizedRoot, filePath);
     if (!resolved.startsWith(normalizedRoot + "/") && resolved !== normalizedRoot) {
-      throw new Error(
-        `files_touched path "${filePath}" is outside repo root "${normalizedRoot}"`,
-      );
+      throw new Error(`files_touched path "${filePath}" is outside repo root "${normalizedRoot}"`);
     }
   }
 }
@@ -114,7 +116,9 @@ async function dispatchClaim(
         return {
           claim_id,
           verdict: "unverified",
-          evidence: [{ kind: "test", path: target.path, note: "file not found in post-diff state" }],
+          evidence: [
+            { kind: "test", path: target.path, note: "file not found in post-diff state" },
+          ],
         };
       }
       return checkTestCovers(claim_id, target.path, vc, sourceFile);
@@ -199,11 +203,9 @@ export async function verify(input: VerifyInput): Promise<VerdictReport> {
     const content = await postDiffFile(repoRoot, filePath);
     if (!content) continue;
 
-    const sourceFile = project.createSourceFile(
-      `__virtual_undeclared__/${filePath}`,
-      content,
-      { overwrite: true },
-    );
+    const sourceFile = project.createSourceFile(`__virtual_undeclared__/${filePath}`, content, {
+      overwrite: true,
+    });
 
     const coveredSymbols = buildCoveredSymbolSet(manifest, filePath);
     const symbolFindings = computeUndeclaredSymbols(sourceFile, filePath, coveredSymbols);

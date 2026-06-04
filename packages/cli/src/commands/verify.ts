@@ -25,9 +25,18 @@ export class VerifyCommand extends Command {
     ],
   });
 
-  manifest = Option.String("--manifest,-m", { required: true, description: "Path to manifest JSON" });
-  diff = Option.String("--diff,-d", { required: true, description: "Path to unified diff file, or - for stdin" });
-  repoRoot = Option.String("--repo-root,-r", { required: false, description: "Repository root (default: cwd)" });
+  manifest = Option.String("--manifest,-m", {
+    required: true,
+    description: "Path to manifest JSON",
+  });
+  diff = Option.String("--diff,-d", {
+    required: true,
+    description: "Path to unified diff file, or - for stdin",
+  });
+  repoRoot = Option.String("--repo-root,-r", {
+    required: false,
+    description: "Repository root (default: cwd)",
+  });
   format = Option.String("--format,-f", "human", { description: "Output format: human or json" });
   noColor = Option.Boolean("--no-color", false, { description: "Disable ANSI color" });
   verbose = Option.Boolean("--verbose,-v", false, { description: "Verbose stderr output" });
@@ -36,9 +45,7 @@ export class VerifyCommand extends Command {
     const { stderr: out } = this.context;
 
     // ── Resolve repo root ────────────────────────────────────────────────
-    const repoRoot = this.repoRoot
-      ? resolve(this.repoRoot)
-      : process.cwd();
+    const repoRoot = this.repoRoot ? resolve(this.repoRoot) : process.cwd();
 
     try {
       await access(repoRoot, constants.R_OK);
@@ -48,9 +55,7 @@ export class VerifyCommand extends Command {
     }
 
     // ── Read manifest ────────────────────────────────────────────────────
-    const manifestPath = isAbsolute(this.manifest)
-      ? this.manifest
-      : resolve(this.manifest);
+    const manifestPath = isAbsolute(this.manifest) ? this.manifest : resolve(this.manifest);
 
     let manifestRawBytes: Buffer;
     try {

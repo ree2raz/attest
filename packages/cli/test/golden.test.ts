@@ -11,9 +11,7 @@ const FIXTURES = join(__dirname, "fixtures", "golden-path");
 const REPO_ROOT = join(__dirname, "..", "..", "..", ".."); // monorepo root
 
 /** Run the CLI via Node directly (ts-node / tsx won't be available; use built dist) */
-async function runCli(
-  args: string[],
-): Promise<{ stdout: string; stderr: string; code: number }> {
+async function runCli(args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
   try {
     const { stdout, stderr } = await execFileAsync(
       process.execPath,
@@ -35,10 +33,14 @@ describe("attest verify — golden path", () => {
   it("exits 1 and produces correct human output", async () => {
     const { stdout, code } = await runCli([
       "verify",
-      "--manifest", MANIFEST,
-      "--diff", DIFF,
-      "--repo-root", REPO,
-      "--format", "human",
+      "--manifest",
+      MANIFEST,
+      "--diff",
+      DIFF,
+      "--repo-root",
+      REPO,
+      "--format",
+      "human",
       "--no-color",
     ]);
 
@@ -50,10 +52,14 @@ describe("attest verify — golden path", () => {
   it("exits 1 and produces correct JSON output", async () => {
     const { stdout, code } = await runCli([
       "verify",
-      "--manifest", MANIFEST,
-      "--diff", DIFF,
-      "--repo-root", REPO,
-      "--format", "json",
+      "--manifest",
+      MANIFEST,
+      "--diff",
+      DIFF,
+      "--repo-root",
+      REPO,
+      "--format",
+      "json",
     ]);
 
     const expected = JSON.parse(readFileSync(join(FIXTURES, "expected.json"), "utf-8"));
@@ -67,9 +73,12 @@ describe("attest verify — exit codes", () => {
   it("exits 66 when manifest file not found", async () => {
     const { code, stderr } = await runCli([
       "verify",
-      "--manifest", "/nonexistent/manifest.json",
-      "--diff", DIFF,
-      "--repo-root", REPO,
+      "--manifest",
+      "/nonexistent/manifest.json",
+      "--diff",
+      DIFF,
+      "--repo-root",
+      REPO,
     ]);
     expect(code).toBe(66);
     expect(stderr).toMatch(/not found|ENOENT/i);
@@ -78,9 +87,12 @@ describe("attest verify — exit codes", () => {
   it("exits 65 when manifest is invalid JSON", async () => {
     const { code, stderr } = await runCli([
       "verify",
-      "--manifest", join(FIXTURES, "input.diff"), // diff is not JSON
-      "--diff", DIFF,
-      "--repo-root", REPO,
+      "--manifest",
+      join(FIXTURES, "input.diff"), // diff is not JSON
+      "--diff",
+      DIFF,
+      "--repo-root",
+      REPO,
     ]);
     expect(code).toBe(65);
     expect(stderr).toMatch(/JSON|parse/i);

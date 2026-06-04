@@ -63,7 +63,12 @@ export function checkSignatureMatches(
       verdict: "unverifiable",
       reason_code: "unsupported_check",
       evidence: [
-        { kind: "symbol", path, symbol, note: `signature_matches not supported for kind "${kind}"` },
+        {
+          kind: "symbol",
+          path,
+          symbol,
+          note: `signature_matches not supported for kind "${kind}"`,
+        },
       ],
     };
   }

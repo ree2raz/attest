@@ -35,7 +35,14 @@ export function checkRemoved(
     return {
       claim_id,
       verdict: "verified",
-      evidence: [{ kind: "symbol", path, ...(symbol ? { symbol } : {}), note: "file deleted; symbol implicitly removed" }],
+      evidence: [
+        {
+          kind: "symbol",
+          path,
+          ...(symbol ? { symbol } : {}),
+          note: "file deleted; symbol implicitly removed",
+        },
+      ],
     };
   }
 
@@ -46,7 +53,14 @@ export function checkRemoved(
     return {
       claim_id,
       verdict: "unverified",
-      evidence: [{ kind: "symbol", path, ...(symbol ? { symbol } : {}), note: `${target.kind} still present in post-diff content` }],
+      evidence: [
+        {
+          kind: "symbol",
+          path,
+          ...(symbol ? { symbol } : {}),
+          note: `${target.kind} still present in post-diff content`,
+        },
+      ],
     };
   }
 
@@ -54,7 +68,14 @@ export function checkRemoved(
     return {
       claim_id,
       verdict: "verified",
-      evidence: [{ kind: "symbol", path, ...(symbol ? { symbol } : {}), note: `${target.kind} absent from post-diff content` }],
+      evidence: [
+        {
+          kind: "symbol",
+          path,
+          ...(symbol ? { symbol } : {}),
+          note: `${target.kind} absent from post-diff content`,
+        },
+      ],
     };
   }
 

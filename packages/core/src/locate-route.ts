@@ -12,11 +12,26 @@ import { SyntaxKind, type SourceFile, type Node } from "ts-morph";
 export type KnownFramework = "express" | "fastify" | "nestjs" | "koa" | "raw-node";
 
 const EXPRESS_METHODS = new Set([
-  "get", "post", "put", "delete", "patch", "options", "head", "all", "use",
+  "get",
+  "post",
+  "put",
+  "delete",
+  "patch",
+  "options",
+  "head",
+  "all",
+  "use",
 ]);
 
 const NESTJS_HTTP_DECORATORS = new Set([
-  "Get", "Post", "Put", "Delete", "Patch", "Options", "Head", "All",
+  "Get",
+  "Post",
+  "Put",
+  "Delete",
+  "Patch",
+  "Options",
+  "Head",
+  "All",
 ]);
 
 export interface RouteLocation {

@@ -4,15 +4,39 @@ import type { Classification } from "./types.js";
 // Layer 1 — Name match
 
 const NEGATIVE_NAMES = new Set([
-  "bodyparser", "cors", "compression", "cookieparser", "morgan", "helmet",
-  "ratelimit", "logger", "errorhandler", "notfound", "staticfiles", "json",
-  "urlencoded", "multer", "upload",
+  "bodyparser",
+  "cors",
+  "compression",
+  "cookieparser",
+  "morgan",
+  "helmet",
+  "ratelimit",
+  "logger",
+  "errorhandler",
+  "notfound",
+  "staticfiles",
+  "json",
+  "urlencoded",
+  "multer",
+  "upload",
 ]);
 
 const POSITIVE_EXACT = new Set([
-  "authenticate", "authentication", "authenticated", "isauthenticated",
-  "requireauth", "requiresauth", "needsauth", "ensureauth", "withauth",
-  "protectroute", "protected", "protect", "private", "guarded", "guard",
+  "authenticate",
+  "authentication",
+  "authenticated",
+  "isauthenticated",
+  "requireauth",
+  "requiresauth",
+  "needsauth",
+  "ensureauth",
+  "withauth",
+  "protectroute",
+  "protected",
+  "protect",
+  "private",
+  "guarded",
+  "guard",
 ]);
 
 const AUTH_REQUIRE_PREFIXES = ["require", "ensure", "check", "verify", "validate"];
@@ -20,12 +44,25 @@ const AUTH_REQUIRE_SUFFIXES = ["auth", "user", "login", "session", "token", "jwt
 
 // Layer 2 — Auth packages
 const AUTH_PACKAGES = new Set([
-  "passport", "express-jwt", "lucia", "lucia-auth", "next-auth",
-  "@nestjs/passport", "@nestjs/jwt", "@clerk/clerk-sdk-node", "better-auth",
+  "passport",
+  "express-jwt",
+  "lucia",
+  "lucia-auth",
+  "next-auth",
+  "@nestjs/passport",
+  "@nestjs/jwt",
+  "@clerk/clerk-sdk-node",
+  "better-auth",
   "firebase-admin/auth",
 ]);
 
-const AUTH_PACKAGE_PREFIXES = ["passport-", "@auth0/", "@clerk/", "@auth/", "@supabase/auth-helpers-"];
+const AUTH_PACKAGE_PREFIXES = [
+  "passport-",
+  "@auth0/",
+  "@clerk/",
+  "@auth/",
+  "@supabase/auth-helpers-",
+];
 
 // jose/jsonwebtoken need body verification check
 const JWT_VERIFY_PACKAGES = new Set(["jose", "jsonwebtoken"]);
@@ -210,7 +247,8 @@ export function classifyEntry(
   // For passport specifically: passport.authenticate is Layer 2
   if (rootName !== name) {
     const pkg = resolveImportPackage(rootName, sourceFile);
-    if (pkg && isAuthPackage(pkg)) return { classification: "auth", layer: "Layer 2 import origin" };
+    if (pkg && isAuthPackage(pkg))
+      return { classification: "auth", layer: "Layer 2 import origin" };
   }
 
   // JWT libs: check body

@@ -1,0 +1,18 @@
+{
+  "attest_version": "1.0",
+  "task_id": "ts-outcome-fail",
+  "result": "fail",
+  "exit_code": 1,
+  "claims": [
+    { "id": "c1", "status": "verified" },
+    { "id": "c2", "status": "verified" },
+    { "id": "c3", "status": "verified" },
+    {
+      "id": "c4",
+      "status": "failed",
+      "reason": "test command exited non-zero (tests_pass not satisfied)"
+    }
+  ],
+  "undeclared_changes": [],
+  "summary": { "claims_total": 4, "verified": 3, "failed": 1, "unverifiable": 0, "undeclared": 0 }
+}

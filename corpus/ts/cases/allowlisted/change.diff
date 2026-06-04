@@ -1,0 +1,28 @@
+diff --git a/package-lock.json b/package-lock.json
+index 6bbd95f..dcb4300 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -6,7 +6,10 @@
+   "packages": {
+     "": {
+       "name": "corpus-ts",
+-      "version": "1.0.0"
++      "version": "1.0.0",
++      "devDependencies": {
++        "typescript": "^5.6.0"
++      }
+     }
+   }
+ }
+diff --git a/src/auth.ts b/src/auth.ts
+index db03973..a2d2cb1 100644
+--- a/src/auth.ts
++++ b/src/auth.ts
+@@ -5,3 +5,7 @@ export function hashToken(token: string): string {
+   }
+   return (h >>> 0).toString(16);
+ }
++
++export function login(user: string, token: string): boolean {
++  return user.length > 0 && hashToken(token).length > 0;
++}

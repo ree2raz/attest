@@ -1,0 +1,14 @@
+{
+  "attest_version": "1.0",
+  "task_id": "ts-allowlisted",
+  "result": "pass",
+  "exit_code": 0,
+  "claims": [
+    { "id": "c1", "status": "verified" },
+    { "id": "c2", "status": "verified" }
+  ],
+  "undeclared_changes": [
+    { "path": "package-lock.json", "op": "modify", "granularity": "file", "severity": "suppressed" }
+  ],
+  "summary": { "claims_total": 2, "verified": 2, "failed": 0, "unverifiable": 0, "undeclared": 0 }
+}

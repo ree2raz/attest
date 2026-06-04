@@ -1,0 +1,19 @@
+{
+  "attest_version": "1.0",
+  "task": { "id": "go-honest", "description": "Add Multiply() to calc and a unit test" },
+  "agent": { "id": "claude-code", "model": "claude-opus-4-8", "tool_calls": 4 },
+  "generated_at": "2026-06-04T00:00:00Z",
+  "declared_scope": { "files": ["calc.go", "calc_test.go"] },
+  "claims": [
+    { "id": "c1", "kind": "file_change", "op": "modify", "path": "calc.go" },
+    {
+      "id": "c2",
+      "kind": "symbol_added",
+      "path": "calc.go",
+      "symbol": "Multiply",
+      "symbol_kind": "function"
+    },
+    { "id": "c3", "kind": "test_added", "path": "calc_test.go", "covers": "Multiply" },
+    { "id": "c4", "kind": "outcome", "check": "tests_pass" }
+  ]
+}

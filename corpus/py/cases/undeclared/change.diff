@@ -1,0 +1,23 @@
+diff --git a/src/calc.py b/src/calc.py
+index e1829c3..0799b17 100644
+--- a/src/calc.py
++++ b/src/calc.py
+@@ -1,2 +1,10 @@
+ def add(a: int, b: int) -> int:
+     return a + b
++
++
++def multiply(a: int, b: int) -> int:
++    return a * b
++
++
++def subtract(a: int, b: int) -> int:
++    return a - b
+diff --git a/src/util.py b/src/util.py
+new file mode 100644
+index 0000000..bc61f5b
+--- /dev/null
++++ b/src/util.py
+@@ -0,0 +1,2 @@
++def clamp(value: int, low: int, high: int) -> int:
++    return max(low, min(high, value))

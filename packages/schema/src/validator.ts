@@ -1,32 +1,21 @@
-import Ajv, { type AnySchema, type ErrorObject } from "ajv/dist/2020.js";
+import Ajv, { type AnySchema, type ErrorObject, type ValidateFunction } from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import type { Manifest, BehavioralProperty } from "./types.js";
+import type { Manifest, Verdict } from "./types.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load the JSON Schema at module initialisation time (sync; file is bundled alongside).
-const rawSchema = JSON.parse(
-  readFileSync(join(__dirname, "manifest.schema.json"), "utf-8"),
-) as AnySchema;
+/** Loads a schema JSON that is bundled alongside this module in `dist/`. */
+function loadSchema(name: string): AnySchema {
+  return JSON.parse(readFileSync(join(__dirname, name), "utf-8")) as AnySchema;
+}
 
-/** Exhaustive list of valid behavioral_property values for semantic validation (Rule 3). */
-const BEHAVIORAL_PROPERTIES: ReadonlySet<BehavioralProperty> = new Set<BehavioralProperty>([
-  "null_check",
-  "input_validation",
-  "error_handling",
-  "authentication",
-  "authorization",
-  "rate_limiting",
-  "logging",
-  "sanitization",
-  "timeout",
-  "retry_logic",
-  "cannot_express",
-]);
+export const MANIFEST_SCHEMA = loadSchema("manifest.schema.json");
+export const VERDICT_SCHEMA = loadSchema("verdict.schema.json");
+export const AUDIT_SCHEMA = loadSchema("audit.schema.json");
 
 export interface ValidationError {
   path: string;
@@ -34,10 +23,10 @@ export interface ValidationError {
   message: string;
 }
 
-export interface Validator {
-  validate(
-    input: unknown,
-  ): { ok: true; manifest: Manifest } | { ok: false; errors: ValidationError[] };
+export type ValidationResult<T> = { ok: true; value: T } | { ok: false; errors: ValidationError[] };
+
+export interface Validator<T> {
+  validate(input: unknown): ValidationResult<T>;
 }
 
 function ajvErrorToValidationError(err: ErrorObject): ValidationError {
@@ -48,79 +37,41 @@ function ajvErrorToValidationError(err: ErrorObject): ValidationError {
   };
 }
 
-/** Factory so each call site gets a fresh validator with shared compiled schema. */
-let compiledValidate: ReturnType<Ajv["compile"]> | null = null;
-
-function getCompiledValidator(): ReturnType<Ajv["compile"]> {
-  if (!compiledValidate) {
-    const ajv = new Ajv({ allErrors: true });
-    addFormats(ajv);
-    compiledValidate = ajv.compile(rawSchema);
-  }
-  return compiledValidate;
-}
-
 /**
- * Semantic validation for hard-fail rule 3:
- * If check is "behavior_present", params.property must be in the BehavioralProperty enum.
- *
- * JSON Schema cannot enforce this because params is typed as a free `object`.
+ * Compiles a schema once and returns a validator that reports structured errors.
+ * Validation is purely structural — there is no semantic layer. (The v0.1
+ * `behavior_present` params check is deliberately gone with the semantic model.)
  */
-function validateBehaviorPresentParams(input: unknown): ValidationError[] {
-  if (typeof input !== "object" || input === null) return [];
-  const obj = input as Record<string, unknown>;
-  const claims = obj["claims"];
-  if (!Array.isArray(claims)) return [];
+function makeValidator<T>(schema: AnySchema): Validator<T> {
+  let compiled: ValidateFunction | null = null;
 
-  const errors: ValidationError[] = [];
-  for (let i = 0; i < claims.length; i++) {
-    const claim = claims[i] as Record<string, unknown> | undefined;
-    if (!claim) continue;
-    const vc = claim["verification_contract"] as Record<string, unknown> | undefined;
-    if (!vc || vc["check"] !== "behavior_present") continue;
-
-    const params = vc["params"] as Record<string, unknown> | undefined;
-    const property = params?.["property"];
-
-    if (property === undefined) {
-      errors.push({
-        path: `/claims/${i}/verification_contract/params/property`,
-        code: "required",
-        message: "behavior_present check requires params.property",
-      });
-    } else if (
-      typeof property !== "string" ||
-      !BEHAVIORAL_PROPERTIES.has(property as BehavioralProperty)
-    ) {
-      errors.push({
-        path: `/claims/${i}/verification_contract/params/property`,
-        code: "enum",
-        message: `params.property "${String(property)}" is not a valid behavioral_property`,
-      });
+  function getCompiled(): ValidateFunction {
+    if (!compiled) {
+      const ajv = new Ajv({ allErrors: true });
+      addFormats(ajv);
+      compiled = ajv.compile(schema);
     }
+    return compiled;
   }
-  return errors;
-}
-
-export function createValidator(): Validator {
-  const validate = getCompiledValidator();
 
   return {
-    validate(input: unknown) {
-      const schemaValid = validate(input);
-
-      if (!schemaValid) {
-        const errors: ValidationError[] = (validate.errors ?? []).map(ajvErrorToValidationError);
-        return { ok: false, errors };
+    validate(input: unknown): ValidationResult<T> {
+      const validate = getCompiled();
+      if (validate(input)) {
+        return { ok: true, value: input as T };
       }
-
-      // Rule 3: semantic check for behavior_present params
-      const semanticErrors = validateBehaviorPresentParams(input);
-      if (semanticErrors.length > 0) {
-        return { ok: false, errors: semanticErrors };
-      }
-
-      return { ok: true, manifest: input as Manifest };
+      const errors = (validate.errors ?? []).map(ajvErrorToValidationError);
+      return { ok: false, errors };
     },
   };
+}
+
+/** Validates an agent-emitted manifest against the v1.0 schema (SPEC §4.1). */
+export function createManifestValidator(): Validator<Manifest> {
+  return makeValidator<Manifest>(MANIFEST_SCHEMA);
+}
+
+/** Validates a verdict against the v1.0 schema (SPEC §4.2). */
+export function createVerdictValidator(): Validator<Verdict> {
+  return makeValidator<Verdict>(VERDICT_SCHEMA);
 }

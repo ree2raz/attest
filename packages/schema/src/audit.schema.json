@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://attest.dev/schema/audit/v1.0.json",
+  "title": "attest audit record",
+  "description": "PROVISIONAL (SPEC §4.3, Phase 3). Append-only provenance record, one per verification, mapped onto EU AI Act Article 12 logging fields. Hashes only, never raw PII or source. Field set is not final until validated against primary statute text in Phase 3 — do not build emission against this yet.",
+  "type": "object",
+  "required": [
+    "record_id",
+    "timestamp",
+    "invoking_user",
+    "governing_spec",
+    "agent",
+    "input_context_hash",
+    "output_artifact_hash",
+    "verdict_digest",
+    "human_reviewer",
+    "disposition"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "record_id": { "type": "string", "minLength": 1 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "invoking_user": { "type": "string", "minLength": 1 },
+    "governing_spec": {
+      "type": ["object", "null"],
+      "required": ["source", "ref"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string", "minLength": 1 },
+        "ref": { "type": "string", "minLength": 1 }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "model": { "type": "string", "minLength": 1 }
+      }
+    },
+    "input_context_hash": { "$ref": "#/$defs/sha256" },
+    "output_artifact_hash": { "$ref": "#/$defs/sha256" },
+    "verdict_digest": { "$ref": "#/$defs/sha256" },
+    "human_reviewer": { "type": ["string", "null"] },
+    "disposition": { "enum": ["pending", "accepted", "rejected"] }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+  }
+}

@@ -32,13 +32,22 @@ export function checkTestCovers(
   // 1. Import declarations
   for (const importDecl of sourceFile.getImportDeclarations()) {
     const defaultImport = importDecl.getDefaultImport();
-    if (defaultImport?.getText() === subjectSymbol) { refCount++; break; }
+    if (defaultImport?.getText() === subjectSymbol) {
+      refCount++;
+      break;
+    }
 
     const namespaceImport = importDecl.getNamespaceImport();
-    if (namespaceImport?.getText() === subjectSymbol) { refCount++; break; }
+    if (namespaceImport?.getText() === subjectSymbol) {
+      refCount++;
+      break;
+    }
 
     const named = importDecl.getNamedImports().find((n) => n.getName() === subjectSymbol);
-    if (named) { refCount++; break; }
+    if (named) {
+      refCount++;
+      break;
+    }
   }
 
   // 2. String literals inside test-runner calls
@@ -49,7 +58,10 @@ export function checkTestCovers(
     for (const arg of callExpr.getArguments()) {
       if (arg.getKind() === SyntaxKind.StringLiteral) {
         const text = arg.asKindOrThrow(SyntaxKind.StringLiteral).getLiteralValue();
-        if (text.includes(subjectSymbol)) { refCount++; break; }
+        if (text.includes(subjectSymbol)) {
+          refCount++;
+          break;
+        }
       }
     }
   }
@@ -71,13 +83,17 @@ export function checkTestCovers(
     return {
       claim_id,
       verdict: "verified",
-      evidence: [{ kind: "test", path, symbol: subjectSymbol, note: `${refCount} reference(s) found` }],
+      evidence: [
+        { kind: "test", path, symbol: subjectSymbol, note: `${refCount} reference(s) found` },
+      ],
     };
   }
 
   return {
     claim_id,
     verdict: "unverified",
-    evidence: [{ kind: "test", path, symbol: subjectSymbol, note: "no references to subject_symbol found" }],
+    evidence: [
+      { kind: "test", path, symbol: subjectSymbol, note: "no references to subject_symbol found" },
+    ],
   };
 }

@@ -157,7 +157,9 @@ describe("verify — undeclared detection", () => {
         },
       ],
     };
-    const diffWithExtra = BASIC_DIFF + `\
+    const diffWithExtra =
+      BASIC_DIFF +
+      `\
 diff --git a/src/other.ts b/src/other.ts
 new file mode 100644
 --- /dev/null

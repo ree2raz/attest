@@ -8,6 +8,9 @@ async function authHook(request: any, reply: any) {
   }
 }
 
-app.post("/x", { preHandler: authHook, handler: async (request, reply) => {
-  reply.send({ ok: true });
-}});
+app.post("/x", {
+  preHandler: authHook,
+  handler: async (request, reply) => {
+    reply.send({ ok: true });
+  },
+});

@@ -42,7 +42,11 @@ function lineOf(node: Node): number {
 }
 
 /** Collect app.use(middleware) calls ABOVE the given line in source */
-function collectAppUseBefore(sourceFile: SourceFile, beforeLine: number, routePath: string): string[] {
+function collectAppUseBefore(
+  sourceFile: SourceFile,
+  beforeLine: number,
+  routePath: string,
+): string[] {
   const result: string[] = [];
   for (const callExpr of sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)) {
     if (lineOf(callExpr) >= beforeLine) continue;
@@ -100,7 +104,8 @@ function findFastifyRoute(
       const firstArg = args[0];
       if (firstArg?.getKind() === SyntaxKind.ObjectLiteralExpression) {
         const obj = firstArg.asKindOrThrow(SyntaxKind.ObjectLiteralExpression);
-        let methodMatch = false, urlMatch = false;
+        let methodMatch = false,
+          urlMatch = false;
         for (const p of obj.getProperties()) {
           if (p.getKind() !== SyntaxKind.PropertyAssignment) continue;
           const pa = p.asKindOrThrow(SyntaxKind.PropertyAssignment);
@@ -111,7 +116,10 @@ function findFastifyRoute(
             const v = init.asKindOrThrow(SyntaxKind.StringLiteral).getLiteralValue();
             if (v.toUpperCase() === method.toUpperCase()) methodMatch = true;
           }
-          if ((pname === "url" || pname === "path") && init.getKind() === SyntaxKind.StringLiteral) {
+          if (
+            (pname === "url" || pname === "path") &&
+            init.getKind() === SyntaxKind.StringLiteral
+          ) {
             const v = init.asKindOrThrow(SyntaxKind.StringLiteral).getLiteralValue();
             if (v === path) urlMatch = true;
           }
@@ -161,7 +169,10 @@ function fastifyGlobalHooks(sourceFile: SourceFile, beforeLine: number): string[
     const firstArg = args[0];
     const secondArg = args[1];
     if (!firstArg || firstArg.getKind() !== SyntaxKind.StringLiteral) continue;
-    const hookName = firstArg.asKindOrThrow(SyntaxKind.StringLiteral).getLiteralValue().toLowerCase();
+    const hookName = firstArg
+      .asKindOrThrow(SyntaxKind.StringLiteral)
+      .getLiteralValue()
+      .toLowerCase();
     if (!hookNames.has(hookName)) continue;
     if (secondArg) result.push(secondArg.getText());
   }
@@ -187,7 +198,16 @@ function nestjsChain(
   if (!method) return null;
 
   // Verify HTTP decorator on method
-  const HTTP_DECORATORS = new Set(["Get","Post","Put","Delete","Patch","Options","Head","All"]);
+  const HTTP_DECORATORS = new Set([
+    "Get",
+    "Post",
+    "Put",
+    "Delete",
+    "Patch",
+    "Options",
+    "Head",
+    "All",
+  ]);
   const hasHttpDecorator = method.getDecorators().some((d) => HTTP_DECORATORS.has(d.getName()));
   if (!hasHttpDecorator) return null;
 
@@ -218,11 +238,7 @@ function nestjsChain(
 
 // ─── Raw Node helpers ──────────────────────────────────────────────────────
 
-function rawNodeChain(
-  sourceFile: SourceFile,
-  method: string,
-  path: string,
-): ChainEntry[] | null {
+function rawNodeChain(sourceFile: SourceFile, method: string, path: string): ChainEntry[] | null {
   // Find http.createServer((req, res) => { ... })
   for (const callExpr of sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)) {
     const expr = callExpr.getExpression();
@@ -260,7 +276,11 @@ function rawNodeChain(
       /res\.(status|sendStatus)\s*\(\s*(401|403)\s*\)/.test(preRouteText);
 
     if (hasAuthHeader || hasStatus401) {
-      entries.push({ name: "pre-route auth check", classification: "auth", layer: "Layer 3 body pattern" });
+      entries.push({
+        name: "pre-route auth check",
+        classification: "auth",
+        layer: "Layer 3 body pattern",
+      });
     } else if (preRouteText.trim()) {
       entries.push({ name: "pre-route statements", classification: "unknown", layer: "no signal" });
     }
@@ -284,7 +304,13 @@ export function collectChain(
     if (entries === null) return "not_found";
     // NestJS: if no guards found, emit unknown (global guards may apply)
     if (entries.length === 0) {
-      return [{ name: "global guards unresolved", classification: "unknown", layer: "NestJS global guards not resolved in v0.1" }];
+      return [
+        {
+          name: "global guards unresolved",
+          classification: "unknown",
+          layer: "NestJS global guards not resolved in v0.1",
+        },
+      ];
     }
     return entries;
   }

@@ -22,9 +22,8 @@ const FRAMEWORK_IMPORTS: Array<{ pattern: string | RegExp; framework: KnownFrame
 function detectFramework(content: string): KnownFramework | null {
   // Quick scan using regex to avoid full parse for this step
   for (const { pattern, framework } of FRAMEWORK_IMPORTS) {
-    const escaped = typeof pattern === "string"
-      ? pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-      : pattern.source;
+    const escaped =
+      typeof pattern === "string" ? pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : pattern.source;
     const re = new RegExp(`from\\s+["']${escaped}["']`);
     if (re.test(content)) return framework;
   }
@@ -120,9 +119,7 @@ export async function detectAuthentication(
     return {
       verdict: "unverifiable",
       reason_code: "invalid_claim_shape",
-      evidence: [
-        { kind: "symbol", path: target.path, note: "target.symbol is required" },
-      ],
+      evidence: [{ kind: "symbol", path: target.path, note: "target.symbol is required" }],
     };
   }
 

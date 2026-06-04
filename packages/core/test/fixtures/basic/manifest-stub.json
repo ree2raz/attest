@@ -1,1 +1,23 @@
-{"schema_version":"0.1","session":{"agent":"claude-code","model":"test","session_id":"b3a1c0e2-9e2f-4e6a-8d13-1f2a3b4c5d6e","started_at":"2026-01-01T00:00:00Z","completed_at":"2026-01-01T00:01:00Z","prompt_hash":"sha256:a3f1c2e4b5d6f7a8c9e0b1d2f3a4c5e6b7d8f9a0c1e2b3d4f5a6c7e8b9d0f1a2","tool_calls_count":1,"files_touched":["src/main.ts"]},"task":{"summary":"test","source":"user_prompt"},"claims":[{"id":"c1","type":"refactor","target":{"kind":"file","path":"src/main.ts"},"description":"refactored","verification_contract":{"check":"cannot_verify"}}]}
+{
+  "schema_version": "0.1",
+  "session": {
+    "agent": "claude-code",
+    "model": "test",
+    "session_id": "b3a1c0e2-9e2f-4e6a-8d13-1f2a3b4c5d6e",
+    "started_at": "2026-01-01T00:00:00Z",
+    "completed_at": "2026-01-01T00:01:00Z",
+    "prompt_hash": "sha256:a3f1c2e4b5d6f7a8c9e0b1d2f3a4c5e6b7d8f9a0c1e2b3d4f5a6c7e8b9d0f1a2",
+    "tool_calls_count": 1,
+    "files_touched": ["src/main.ts"]
+  },
+  "task": { "summary": "test", "source": "user_prompt" },
+  "claims": [
+    {
+      "id": "c1",
+      "type": "refactor",
+      "target": { "kind": "file", "path": "src/main.ts" },
+      "description": "refactored",
+      "verification_contract": { "check": "cannot_verify" }
+    }
+  ]
+}

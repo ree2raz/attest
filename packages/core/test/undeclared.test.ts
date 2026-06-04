@@ -23,9 +23,9 @@ describe("computeUndeclaredFiles", () => {
 
   it("uses union of diff_paths and files_touched", () => {
     const result = computeUndeclaredFiles(
-      new Set(["src/a.ts"]),     // in diff only
-      ["src/b.ts"],               // in touched only
-      new Set([]),                // nothing declared
+      new Set(["src/a.ts"]), // in diff only
+      ["src/b.ts"], // in touched only
+      new Set([]), // nothing declared
     );
     expect(result.sort()).toEqual(["src/a.ts", "src/b.ts"]);
   });
@@ -33,8 +33,8 @@ describe("computeUndeclaredFiles", () => {
   it("does not flag files in touched but absent from diff (no concern)", () => {
     // files_touched but absent from diff AND declared → not flagged
     const result = computeUndeclaredFiles(
-      new Set([]),               // diff is empty
-      ["src/declared.ts"],       // only touched
+      new Set([]), // diff is empty
+      ["src/declared.ts"], // only touched
       new Set(["src/declared.ts"]), // declared
     );
     expect(result).toEqual([]);

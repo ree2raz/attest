@@ -13,24 +13,21 @@
     {
       "claim_id": "c1",
       "verdict": "verified",
-      "evidence": [
-        { "kind": "route", "path": "src/routes/auth.ts", "symbol": "POST /login" }
-      ]
+      "evidence": [{ "kind": "route", "path": "src/routes/auth.ts", "symbol": "POST /login" }]
     },
     {
       "claim_id": "c2",
       "verdict": "unverified",
       "reason_code": "no_auth_in_chain",
-      "evidence": [
-        { "kind": "route", "path": "src/routes/auth.ts", "symbol": "POST /login" }
-      ]
+      "evidence": [{ "kind": "route", "path": "src/routes/auth.ts", "symbol": "POST /login" }]
     }
   ],
-  "undeclared": [
-    { "type": "symbol", "path": "src/routes/auth.ts", "symbol": "unlistedHelper" }
-  ],
+  "undeclared": [{ "type": "symbol", "path": "src/routes/auth.ts", "symbol": "unlistedHelper" }],
   "reviewer_focus": [
     { "claim_id": "c2", "reason": "c2 failed — authentication not detected" },
-    { "undeclared": { "type": "symbol", "path": "src/routes/auth.ts", "symbol": "unlistedHelper" }, "reason": "undeclared change to `unlistedHelper`" }
+    {
+      "undeclared": { "type": "symbol", "path": "src/routes/auth.ts", "symbol": "unlistedHelper" },
+      "reason": "undeclared change to `unlistedHelper`"
+    }
   ]
 }

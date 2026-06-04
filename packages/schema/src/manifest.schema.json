@@ -9,19 +9,25 @@
     "session": {
       "type": "object",
       "required": [
-        "agent", "model", "session_id", "started_at", "completed_at",
-        "prompt_hash", "tool_calls_count", "files_touched"
+        "agent",
+        "model",
+        "session_id",
+        "started_at",
+        "completed_at",
+        "prompt_hash",
+        "tool_calls_count",
+        "files_touched"
       ],
       "additionalProperties": false,
       "properties": {
-        "agent":            { "enum": ["claude-code", "codex", "cursor", "opencode", "other"] },
-        "model":            { "type": "string", "minLength": 1 },
-        "session_id":       { "type": "string", "format": "uuid" },
-        "started_at":       { "type": "string", "format": "date-time" },
-        "completed_at":     { "type": "string", "format": "date-time" },
-        "prompt_hash":      { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "agent": { "enum": ["claude-code", "codex", "cursor", "opencode", "other"] },
+        "model": { "type": "string", "minLength": 1 },
+        "session_id": { "type": "string", "format": "uuid" },
+        "started_at": { "type": "string", "format": "date-time" },
+        "completed_at": { "type": "string", "format": "date-time" },
+        "prompt_hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
         "tool_calls_count": { "type": "integer", "minimum": 0 },
-        "files_touched":    { "type": "array", "items": { "type": "string" } }
+        "files_touched": { "type": "array", "items": { "type": "string" } }
       }
     },
     "task": {
@@ -30,7 +36,7 @@
       "additionalProperties": false,
       "properties": {
         "summary": { "type": "string", "maxLength": 120 },
-        "source":  { "enum": ["user_prompt", "issue_reference", "continuation"] }
+        "source": { "enum": ["user_prompt", "issue_reference", "continuation"] }
       }
     },
     "claims": {
@@ -45,12 +51,18 @@
       "required": ["id", "type", "target", "description", "verification_contract"],
       "additionalProperties": false,
       "properties": {
-        "id":   { "type": "string", "pattern": "^c[0-9]+$" },
+        "id": { "type": "string", "pattern": "^c[0-9]+$" },
         "type": {
           "enum": [
-            "add_symbol", "remove_symbol", "modify_signature",
-            "modify_behavior", "add_test", "refactor",
-            "add_dependency", "remove_dependency", "config_change"
+            "add_symbol",
+            "remove_symbol",
+            "modify_signature",
+            "modify_behavior",
+            "add_test",
+            "refactor",
+            "add_dependency",
+            "remove_dependency",
+            "config_change"
           ]
         },
         "target": {
@@ -58,8 +70,19 @@
           "required": ["kind", "path"],
           "additionalProperties": false,
           "properties": {
-            "kind":   { "enum": ["function", "class", "type", "endpoint", "file", "module", "config_key", "package"] },
-            "path":   { "type": "string" },
+            "kind": {
+              "enum": [
+                "function",
+                "class",
+                "type",
+                "endpoint",
+                "file",
+                "module",
+                "config_key",
+                "package"
+              ]
+            },
+            "path": { "type": "string" },
             "symbol": { "type": "string" }
           }
         },
@@ -71,8 +94,12 @@
           "properties": {
             "check": {
               "enum": [
-                "symbol_exists", "behavior_present", "test_covers",
-                "signature_matches", "removed", "cannot_verify"
+                "symbol_exists",
+                "behavior_present",
+                "test_covers",
+                "signature_matches",
+                "removed",
+                "cannot_verify"
               ]
             },
             "params": { "type": "object" }

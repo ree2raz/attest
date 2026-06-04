@@ -35,7 +35,9 @@ export interface ValidationError {
 }
 
 export interface Validator {
-  validate(input: unknown): { ok: true; manifest: Manifest } | { ok: false; errors: ValidationError[] };
+  validate(
+    input: unknown,
+  ): { ok: true; manifest: Manifest } | { ok: false; errors: ValidationError[] };
 }
 
 function ajvErrorToValidationError(err: ErrorObject): ValidationError {
@@ -84,7 +86,7 @@ function validateBehaviorPresentParams(input: unknown): ValidationError[] {
       errors.push({
         path: `/claims/${i}/verification_contract/params/property`,
         code: "required",
-        message: 'behavior_present check requires params.property',
+        message: "behavior_present check requires params.property",
       });
     } else if (
       typeof property !== "string" ||

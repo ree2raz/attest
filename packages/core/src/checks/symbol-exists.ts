@@ -85,6 +85,8 @@ export function checkSymbolExists(
   return {
     claim_id,
     verdict: "unverified",
-    evidence: [{ kind: "symbol", path, symbol, note: `${kind} declaration not found in post-diff content` }],
+    evidence: [
+      { kind: "symbol", path, symbol, note: `${kind} declaration not found in post-diff content` },
+    ],
   };
 }

@@ -110,3 +110,46 @@ deterministic and fully ours, and the corpus is the oracle for the model.
 (v0.1 API) until WU5/WU7/WU8. `@attest/schema` + `@attest/diff` green in isolation.
 
 **Next:** WU4 — `@attest/symbols` (tree-sitter symbol extraction, TS/Py/Go).
+
+## WU4 — `@attest/symbols` tree-sitter extraction (2026-06-05)
+
+New package `packages/symbols` (SPEC §5.1 — the architectural linchpin). One job:
+_does a declaration of this name + kind exist, and where_ — **structure only, never
+behavior. No detector logic.**
+
+- **Runtime: WASM (`web-tree-sitter`), not native bindings.** No node-gyp/native
+  compile (this machine already fights native builds), deterministic, portable.
+  **Pinned `web-tree-sitter@0.22.6`** — 0.26 cannot load the prebuilt grammars
+  (dylink/ABI mismatch: `tree-sitter-wasms@0.1.13` grammars are built against
+  tree-sitter ~0.20). 0.22 uses the pre-0.25 default-export API
+  (`Parser.init()` / `Parser.Language.load`).
+- **Grammars vendored** under `grammars/*.wasm` (ts/tsx/py/go) via
+  `scripts/vendor-grammars.mjs` (copies from `tree-sitter-wasms`, a devDep) so the
+  package is self-contained at runtime. `grammars/` sits one level above both `src/`
+  and `dist/`, so the same `../grammars` path resolves in test and built modes.
+  Binary wasm is git-tracked and `.prettierignore`d.
+- **Node-kind maps** grounded by probing the real grammars (not guessed): TS unwraps
+  `export_statement`, treats `const f = () =>`/function-expression as `function`,
+  `const`→`constant` else `variable`, methods from `class_body`; Python maps `def`→
+  function (module) / method (in class), `class`, and a module binding to **both
+  `constant` and `variable`** (the distinction is convention = semantic = out of
+  scope); Go maps func/method/struct/interface/type/const/var incl. grouped specs.
+  Recursion is shallow on purpose (top-level + class methods; **not** into function
+  bodies) so undeclared-change detection stays low-noise.
+- **API:** `extractSymbols(lang, source)` (async; grammars cached per process),
+  `locateSymbol`/`symbolMatches` (a decl carries every `symbol_kind` it satisfies),
+  `diffSymbols(before, after)` → added/removed/**modified** (modified = changed
+  declaration source slice; a deterministic text compare, not behavioral),
+  `langFromPath` (JS routes to the TS grammar). `SymbolKind` re-exported from
+  `@attest/schema` (single source for the taxonomy).
+- **Tests (18):** extraction across TS/TSX/Py/Go covering the full kind set + a
+  corpus oracle that extracts the honest fixtures' post-change (overlay) sources and
+  confirms each declared `symbol_added` resolves. Built-dist smoke test confirms the
+  runtime grammar path. Green in isolation: build ✓, typecheck ✓, 18 tests ✓,
+  eslint ✓, prettier ✓ (repo-wide `format:check` clean).
+
+**Still expected-red:** `@attest/core`, `@attest/cli`, `@attest/detectors-ts` until
+WU5/WU7/WU8. Migrated + green: schema, diff, symbols.
+
+**Next:** WU5 — `@attest/core` (load manifest, the three verifiers, undeclared
+detection, assemble verdict — the heart, judgment-heavy).

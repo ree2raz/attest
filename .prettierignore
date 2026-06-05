@@ -8,3 +8,6 @@ corpus/**/base/**
 corpus/**/overlay/**
 corpus/**/*.diff
 corpus/tools/*.sh
+
+# Vendored prebuilt tree-sitter grammars (binary wasm) — no parser, never format.
+packages/symbols/grammars/**

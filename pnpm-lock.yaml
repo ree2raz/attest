@@ -108,6 +108,22 @@ importers:
         specifier: ^4.1.7
         version: 4.1.7(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(vite@8.0.14(@types/node@25.9.1)(esbuild@0.27.7)(yaml@2.9.0))
 
+  packages/symbols:
+    dependencies:
+      "@attest/schema":
+        specifier: workspace:*
+        version: link:../schema
+      web-tree-sitter:
+        specifier: 0.22.6
+        version: 0.22.6
+    devDependencies:
+      tree-sitter-wasms:
+        specifier: ^0.1.13
+        version: 0.1.13
+      vitest:
+        specifier: ^4.1.7
+        version: 4.1.7(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(vite@8.0.14(@types/node@25.9.1)(esbuild@0.27.7)(yaml@2.9.0))
+
 packages:
   "@babel/helper-string-parser@7.29.7":
     resolution:
@@ -2815,6 +2831,12 @@ packages:
       }
     hasBin: true
 
+  tree-sitter-wasms@0.1.13:
+    resolution:
+      {
+        integrity: sha512-wT+cR6DwaIz80/vho3AvSF0N4txuNx/5bcRKoXouOfClpxh/qqrF4URNLQXbbt8MaAxeksZcZd1j8gcGjc+QxQ==,
+      }
+
   ts-api-utils@2.5.0:
     resolution:
       {
@@ -3009,6 +3031,12 @@ packages:
         optional: true
       jsdom:
         optional: true
+
+  web-tree-sitter@0.22.6:
+    resolution:
+      {
+        integrity: sha512-hS87TH71Zd6mGAmYCvlgxeGDjqd9GTeqXNqTT+u0Gs51uIozNIaaq/kUAbV/Zf56jb2ZOyG8BxZs2GG9wbLi6Q==,
+      }
 
   which@2.0.2:
     resolution:
@@ -4570,6 +4598,8 @@ snapshots:
 
   tree-kill@1.2.2: {}
 
+  tree-sitter-wasms@0.1.13: {}
+
   ts-api-utils@2.5.0(typescript@6.0.3):
     dependencies:
       typescript: 6.0.3
@@ -4681,6 +4711,8 @@ snapshots:
       "@vitest/coverage-v8": 4.1.7(vitest@4.1.7)
     transitivePeerDependencies:
       - msw
+
+  web-tree-sitter@0.22.6: {}
 
   which@2.0.2:
     dependencies:

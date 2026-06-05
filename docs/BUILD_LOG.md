@@ -258,4 +258,79 @@ come together and produce end-to-end verdicts against real repos.
 **All 6 Phase-1 packages migrated and green: 146 tests total.**
 **Still expected-red:** `@attest/detectors-ts` (v0.1 API) until WU8.
 
-**Next:** WU8 — demote `@attest/detectors-ts` to opt-in plugin; WU9 — §6.7 acceptance gate.
+---
+
+## WU8 — detectors-ts demotion (SPEC §6.5)
+
+Demoted `@attest/detectors-ts` from a verification-path plugin (v0.1) to an
+opt-in, best-effort, advisory plugin (v0.2). The v0.1 shape it consumed
+(`Claim` with `target.kind: "endpoint"`, `verification_contract.check:
+"behavior_present"`) is now reserved for `UnknownClaim` → `unverifiable` in
+the closed v1.0 verdict taxonomy — so the v0.1 detector was doubly wrong:
+built on a `Claim` shape the schema no longer accepts, and pointing at a
+behavioural claim that v1.0 explicitly rejects as unverifiable with the
+LLM-review pointer.
+
+**What changed**
+
+- **New public surface** (`packages/detectors-ts/src/index.ts`):
+  `runDetectors({ diff, repoRoot })` — top-level entry point that scans
+  TS/JS files in a diff, enumerates routes per framework, and returns
+  `DetectorOutput[]`. Plus `detectAuthentication({ path, symbol, content })`
+  as a lower-level helper, `findRoutesInFile(path, content)` for power
+  users, and `DETECTOR_WARNINGS` (the standard advisory label carried on
+  every output).
+- **New advisory type** (`src/types.ts`): `DetectorOutput` with `status` in
+  `{advisory_present, advisory_absent, advisory_inconclusive}` — never
+  `verified` / `failed` / `unverifiable` (those belong to the closed
+  `ClaimResult` taxonomy owned by `@attest/core`).
+- **`detectAuthentication` refactored** to take `{ path, symbol, content }`
+  directly. No more `Claim`, no more `DetectorContext`, no more
+  `registerDetectors()`. The `chain.ts` / `classify.ts` heuristics are
+  untouched (sunk work, occasional signal — per SPEC §6.5).
+- **Route enumeration** in `runDetectors`: Express/Fastify/Koa method calls
+  via ts-morph, Fastify `route({ method, url })` config objects, NestJS
+  `@Controller` + HTTP method decorators, raw-Node `req.method` + `req.url`
+  branches. One `DetectorOutput` per `(file, route)` pair.
+- **Dependencies**: dropped `@attest/core` and `@attest/schema` (the broken
+  type re-exports and the v0.1 `Claim` import), added `@attest/diff` (for
+  `ParsedDiff` in `runDetectors`).
+- **`package.json` description** now starts with the §6.5 label verbatim
+  ("Best-effort, non-deterministic, not part of the core verdict — do not
+  use in CI gates"). Version bumped 0.1.0 → 0.2.0.
+- **New README** (`packages/detectors-ts/README.md`) covering when to use,
+  when NOT to use, the full API, status semantics, supported frameworks,
+  and history.
+- **`CONTRIBUTING.md`** updated: removed references to the deleted
+  `Detector` interface and `registerDetectors()`. The hook point for new
+  detector properties is now `runDetectors` + a new
+  `DetectorOutput`-returning function.
+
+**Structural guarantees (verifiable post-WU8)**
+
+- `grep -rn "@attest/detectors" packages/core packages/cli packages/runner`
+  → empty.
+- `grep -rn "registerDetectors" packages/detectors-ts/src` → empty.
+- `pnpm --r --filter "./packages/*" build` → green (was red before WU8
+  on detectors-ts — 12 TS2305/TS2339 errors from broken `Detector` type
+  re-exports).
+- `pnpm --r --filter "./packages/*" typecheck` → green across all 7
+  packages.
+- `verdict.exit_code` is computed in `packages/core/src/verify.ts:31` and
+  depends only on `claimResults` and `undeclared`. The new
+  `@attest/detectors-ts` API has no path into either — structural
+  guarantee that it cannot influence the verdict.
+
+**Tests (24):** 18 fixture cases (all v0.1 fixtures kept verbatim, verdict
+vocabulary translated to advisory status at test time) + framework
+detection (1) + Layer 1 prefix+suffix (1) + negative-list middleware (1) +
+stub (2) + runDetectors: route enumeration (5) + skip rules (3) +
+advisory-status mapping (1) + skip unsupported framework (1).
+
+**Green in isolation:** build ✓, typecheck ✓, 24 tests ✓.
+
+**All 7 Phase-1 packages migrated and green: 180 tests total.**
+
+**Next:** WU9 — §6.7 acceptance gate (multi-language CLI, scope-drift
+plant, worktree outcome, behavioral unverifiable, corpus in CI, README
+zero-to-first-verdict).

@@ -75,12 +75,9 @@ importers:
 
   packages/detectors-ts:
     dependencies:
-      "@attest/core":
+      "@attest/diff":
         specifier: workspace:*
-        version: link:../core
-      "@attest/schema":
-        specifier: workspace:*
-        version: link:../schema
+        version: link:../diff
       ts-morph:
         specifier: ^28.0.0
         version: 28.0.0

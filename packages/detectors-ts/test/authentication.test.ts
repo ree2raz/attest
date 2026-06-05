@@ -3,16 +3,23 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { detectAuthentication } from "../src/authentication/index.js";
-import type { Claim } from "@attest/schema";
+import type { DetectorStatus } from "../src/types.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURES_DIR = join(__dirname, "..", "fixtures", "authentication");
 
 interface ExpectedResult {
-  verdict: string;
+  /** v0.1 verdict vocabulary — translated to the v0.2 advisory `status` at test time. */
+  verdict: "verified" | "unverified" | "partial";
   reason_code: string | null;
   evidence_contains: string[];
 }
+
+const VERDICT_TO_STATUS: Record<ExpectedResult["verdict"], DetectorStatus> = {
+  verified: "advisory_present",
+  unverified: "advisory_absent",
+  partial: "advisory_inconclusive",
+};
 
 function loadFixture(name: string): { content: string; expected: ExpectedResult } {
   const content = readFileSync(join(FIXTURES_DIR, `${name}.ts`), "utf-8");
@@ -22,44 +29,7 @@ function loadFixture(name: string): { content: string; expected: ExpectedResult 
   return { content, expected };
 }
 
-function makeClaim(symbol: string, path: string): Claim {
-  return {
-    id: "c1",
-    type: "modify_behavior",
-    target: { kind: "endpoint", path, symbol },
-    description: "auth check",
-    verification_contract: {
-      check: "behavior_present",
-      params: { property: "authentication" },
-    },
-  };
-}
-
-function makeNestClaim(symbol: string, path: string): Claim {
-  return {
-    id: "c1",
-    type: "add_symbol",
-    target: { kind: "endpoint", path, symbol },
-    description: "auth check",
-    verification_contract: {
-      check: "behavior_present",
-      params: { property: "authentication" },
-    },
-  };
-}
-
-async function runFixture(name: string, symbol: string, isNest = false) {
-  const { content, expected } = loadFixture(name);
-  const claim = isNest ? makeNestClaim(symbol, `${name}.ts`) : makeClaim(symbol, `${name}.ts`);
-  const result = await detectAuthentication(claim, {
-    repoRoot: FIXTURES_DIR,
-    postDiffFile: async () => content,
-  });
-
-  return { result, expected };
-}
-
-const FIXTURES: Array<{ name: string; symbol: string; isNest?: boolean }> = [
+const FIXTURES: Array<{ name: string; symbol: string }> = [
   { name: "express-route-level-valid", symbol: "POST /x" },
   { name: "express-app-level-valid", symbol: "POST /x" },
   { name: "express-no-auth", symbol: "POST /x" },
@@ -67,9 +37,9 @@ const FIXTURES: Array<{ name: string; symbol: string; isNest?: boolean }> = [
   { name: "fastify-preHandler-valid", symbol: "POST /x" },
   { name: "fastify-addHook-valid", symbol: "POST /x" },
   { name: "fastify-no-auth", symbol: "POST /x" },
-  { name: "nestjs-method-guard-valid", symbol: "ItemsController.create", isNest: true },
-  { name: "nestjs-class-guard-valid", symbol: "ItemsController.create", isNest: true },
-  { name: "nestjs-no-guard", symbol: "ItemsController.create", isNest: true },
+  { name: "nestjs-method-guard-valid", symbol: "ItemsController.create" },
+  { name: "nestjs-class-guard-valid", symbol: "ItemsController.create" },
+  { name: "nestjs-no-guard", symbol: "ItemsController.create" },
   { name: "koa-app-use-valid", symbol: "POST /x" },
   { name: "koa-router-level-valid", symbol: "POST /x" },
   { name: "koa-no-auth", symbol: "POST /x" },
@@ -81,72 +51,45 @@ const FIXTURES: Array<{ name: string; symbol: string; isNest?: boolean }> = [
 ];
 
 describe("detectAuthentication — fixture suite", () => {
-  for (const { name, symbol, isNest } of FIXTURES) {
+  for (const { name, symbol } of FIXTURES) {
     it(name, async () => {
-      const { result, expected } = await runFixture(name, symbol, isNest);
+      const { content, expected } = loadFixture(name);
+      const output = await detectAuthentication({
+        path: `${name}.ts`,
+        symbol,
+        content,
+      });
 
-      expect(result.verdict).toBe(expected.verdict);
-      expect(result.reason_code ?? null).toBe(expected.reason_code);
+      const expectedStatus = VERDICT_TO_STATUS[expected.verdict];
+      expect(output.detector).toBe("authentication");
+      expect(output.path).toBe(`${name}.ts`);
+      expect(output.symbol).toBe(symbol);
+      expect(output.status).toBe(expectedStatus);
+      expect(output.reason_code ?? null).toBe(expected.reason_code);
 
-      const evidenceText = result.evidence.map((e) => JSON.stringify(e)).join(" ");
+      const evidenceText = output.evidence.map((e) => JSON.stringify(e)).join(" ");
       for (const fragment of expected.evidence_contains) {
         expect(evidenceText).toContain(fragment);
       }
+
+      // Every output carries the advisory warnings (SPEC §6.5).
+      expect(output.warnings.length).toBeGreaterThan(0);
+      expect(output.warnings.join(" ")).toMatch(/best-effort/);
+      expect(output.warnings.join(" ")).toMatch(/not part of the core verdict/);
     });
   }
 });
 
-describe("detectAuthentication — invalid claim shape", () => {
-  it("rejects non-endpoint target kind", async () => {
-    const claim: Claim = {
-      id: "c1",
-      type: "add_symbol",
-      target: { kind: "function", path: "src/foo.ts", symbol: "foo" },
-      description: "test",
-      verification_contract: { check: "behavior_present", params: { property: "authentication" } },
-    };
-    const result = await detectAuthentication(claim, {
-      repoRoot: "/tmp",
-      postDiffFile: async () => null,
+describe("detectAuthentication — framework detection", () => {
+  it("returns framework_unsupported when no framework import is present", async () => {
+    const output = await detectAuthentication({
+      path: "src/foo.ts",
+      symbol: "POST /x",
+      content: `export function handler() { return 1; }`,
     });
-    expect(result.verdict).toBe("unverifiable");
-    expect(result.reason_code).toBe("invalid_claim_shape");
-  });
-
-  it("rejects missing symbol", async () => {
-    const claim: Claim = {
-      id: "c1",
-      type: "modify_behavior",
-      target: { kind: "endpoint", path: "src/foo.ts" },
-      description: "test",
-      verification_contract: { check: "behavior_present", params: { property: "authentication" } },
-    };
-    const result = await detectAuthentication(claim, {
-      repoRoot: "/tmp",
-      postDiffFile: async () => null,
-    });
-    expect(result.verdict).toBe("unverifiable");
-    expect(result.reason_code).toBe("invalid_claim_shape");
-  });
-
-  it("returns framework_unsupported when no framework import", async () => {
-    const claim = makeClaim("POST /x", "src/foo.ts");
-    const result = await detectAuthentication(claim, {
-      repoRoot: "/tmp",
-      postDiffFile: async () => `export function handler() { return 1; }`,
-    });
-    expect(result.verdict).toBe("unverifiable");
-    expect(result.reason_code).toBe("framework_unsupported");
-  });
-
-  it("returns parse_error when file not found", async () => {
-    const claim = makeClaim("POST /x", "src/missing.ts");
-    const result = await detectAuthentication(claim, {
-      repoRoot: "/tmp",
-      postDiffFile: async () => null,
-    });
-    expect(result.verdict).toBe("unverifiable");
-    expect(result.reason_code).toBe("parse_error");
+    expect(output.status).toBe("advisory_inconclusive");
+    expect(output.reason_code).toBe("framework_unsupported");
+    expect(output.framework).toBe("unknown");
   });
 });
 
@@ -158,12 +101,12 @@ const app = express();
 function checkJwt(req: any, res: any, next: any) { next(); }
 app.post("/x", checkJwt, (req, res) => { res.json({}); });
 `;
-    const claim = makeClaim("POST /x", "src/test.ts");
-    const result = await detectAuthentication(claim, {
-      repoRoot: "/tmp",
-      postDiffFile: async () => content,
+    const output = await detectAuthentication({
+      path: "src/test.ts",
+      symbol: "POST /x",
+      content,
     });
-    expect(result.verdict).toBe("verified");
+    expect(output.status).toBe("advisory_present");
   });
 });
 
@@ -175,12 +118,12 @@ const app = express();
 app.use(express.json());
 app.post("/x", (req, res) => { res.json({}); });
 `;
-    const claim = makeClaim("POST /x", "src/test.ts");
-    const result = await detectAuthentication(claim, {
-      repoRoot: "/tmp",
-      postDiffFile: async () => content,
+    const output = await detectAuthentication({
+      path: "src/test.ts",
+      symbol: "POST /x",
+      content,
     });
-    expect(result.verdict).toBe("unverified");
-    expect(result.reason_code).toBe("no_auth_in_chain");
+    expect(output.status).toBe("advisory_absent");
+    expect(output.reason_code).toBe("no_auth_in_chain");
   });
 });

@@ -1,15 +1,14 @@
-diff --git a/src/routes/auth.ts b/src/routes/auth.ts
-new file mode 100644
-index 0000000..abc1234
---- /dev/null
-+++ b/src/routes/auth.ts
-@@ -0,0 +1,8 @@
-+import express from "express";
+diff --git a/src/auth.ts b/src/auth.ts
+index abc1234..def5678 100644
+--- a/src/auth.ts
++++ b/src/auth.ts
+@@ -1,3 +1,11 @@
+ export function hashToken(token: string): string {
+   return token;
+ }
 +
-+export function unlistedHelper(): void {
-+  // not in any claim
++export function login(user: string): boolean {
++  return user.length > 0;
 +}
 +
-+express().post("/login", (req, res) => {
-+  res.json({ ok: true });
-+});
++function _helper(): void {}

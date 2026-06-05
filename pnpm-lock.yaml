@@ -37,9 +37,12 @@ importers:
       "@attest/core":
         specifier: workspace:*
         version: link:../core
-      "@attest/detectors-ts":
+      "@attest/diff":
         specifier: workspace:*
-        version: link:../detectors-ts
+        version: link:../diff
+      "@attest/runner":
+        specifier: workspace:*
+        version: link:../runner
       "@attest/schema":
         specifier: workspace:*
         version: link:../schema

@@ -222,3 +222,40 @@ test/build/vet ./...`), Python (`pytest`; build/lint declined as too variable),
 
 **Next:** WU7 — `@attest/cli` (wire manifest+diff+runner+core; human/JSON render;
 config-file loading; `attest verify` / `attest schema`).
+
+## WU7 — `@attest/cli` v1.0 (2026-06-05)
+
+Complete rewrite of the CLI to v1.0. This is the seam where the five engine packages
+come together and produce end-to-end verdicts against real repos.
+
+- **`attest verify`** (`commands/verify.ts`): reads manifest via `createManifestValidator`,
+  parses diff via `@attest/diff parseDiff` (`--diff` optional — omit to run `git diff HEAD`),
+  loads `attest.config.json` if present, **runs `@attest/runner runOutcomes`** for any
+  `outcome` claims (injects results into `verify`; runner errors degrade to unverifiable,
+  never crash), then calls `@attest/core verify`. Exit code = `verdict.exit_code` (0 or 1).
+  Error exits: 66 (NOINPUT), 65 (DATAERR), 70 (INTERNAL).
+- **`attest schema [manifest|verdict]`** (`commands/schema.ts`): prints the JSON Schema
+  from `@attest/schema`. SPEC §6.6 requirement.
+- **Config loader** (`config.ts`): reads `attest.config.json` from repoRoot (snake_case
+  keys `build_cmd`/`test_cmd`/`lint_cmd`/`allowlist_basenames`/`allowlist_dirs`/
+  `test_globs_extra`); maps to `RunnerConfig` + `AttestConfig`. Missing file → both
+  undefined so engine defaults apply. `attest.toml` support deferred to Phase 2.
+- **Human renderer** (`render/human.ts`): header (version, task, agent), per-claim icon
+  (`✓`/`✗`/`~`) + kind + detail + reason, undeclared section (flagged + suppressed
+  counts), summary line, result line. Color is opt-in via TTY detection; `--no-color`
+  always disables.
+- **JSON renderer** (`render/json.ts`): `JSON.stringify(verdict, null, 2)` — the verdict
+  object is the schema-conformant output, nothing added.
+- **Removed `@attest/detectors-ts`** from CLI dependencies. The CLI no longer calls
+  detector code. WU8 will demote `@attest/detectors-ts` into the opt-in plugin package.
+- **Golden-path fixture** updated to v1.0 format: a `modify` diff on `src/auth.ts` adds
+  `login` (claimed) and `_helper` (not claimed), giving exit 1 with one undeclared symbol.
+  `expected-human.txt` and `expected.json` are generated from the live CLI output.
+- **Tests (6):** golden-path human ✓, golden-path JSON ✓, exit-66 (NOINPUT) ✓, exit-65
+  (DATAERR bad JSON) ✓, placeholder exit-0 contract ✓, scaffold ✓.
+- Green in isolation: build ✓, typecheck ✓, 6 tests ✓, eslint ✓, prettier ✓.
+
+**All 6 Phase-1 packages migrated and green: 146 tests total.**
+**Still expected-red:** `@attest/detectors-ts` (v0.1 API) until WU8.
+
+**Next:** WU8 — demote `@attest/detectors-ts` to opt-in plugin; WU9 — §6.7 acceptance gate.

@@ -1,5 +1,5 @@
-import type { VerdictReport } from "@attest/core";
+import type { Verdict } from "@attest/schema";
 
-export function renderJson(report: VerdictReport): string {
-  return JSON.stringify(report, null, 2) + "\n";
+export function renderJson(verdict: Verdict): string {
+  return JSON.stringify(verdict, null, 2) + "\n";
 }

@@ -3,16 +3,16 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { VerifyCommand } from "./commands/verify.js";
+import { SchemaCommand } from "./commands/schema.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// Read version from package.json
-let version = "0.1.0";
+let version = "1.0.0";
 try {
   const pkg = JSON.parse(readFileSync(join(__dirname, "..", "package.json"), "utf-8")) as {
     version?: string;
   };
-  version = pkg.version ?? "0.1.0";
+  version = pkg.version ?? "1.0.0";
 } catch {
   // fallback
 }
@@ -24,6 +24,7 @@ const cli = new Cli({
 });
 
 cli.register(VerifyCommand);
+cli.register(SchemaCommand);
 cli.register(Builtins.HelpCommand);
 cli.register(Builtins.VersionCommand);
 

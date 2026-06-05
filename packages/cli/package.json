@@ -1,6 +1,6 @@
 {
   "name": "@attest/cli",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "bin": {
     "attest": "./dist/index.js"
@@ -19,7 +19,8 @@
   },
   "dependencies": {
     "@attest/core": "workspace:*",
-    "@attest/detectors-ts": "workspace:*",
+    "@attest/diff": "workspace:*",
+    "@attest/runner": "workspace:*",
     "@attest/schema": "workspace:*",
     "clipanion": "^3.2.1"
   }

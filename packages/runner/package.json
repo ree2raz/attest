@@ -1,5 +1,5 @@
 {
-  "name": "@attest/core",
+  "name": "@attest/runner",
   "version": "1.0.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -22,8 +22,7 @@
     "vitest": "^4.1.7"
   },
   "dependencies": {
-    "@attest/diff": "workspace:*",
-    "@attest/schema": "workspace:*",
-    "@attest/symbols": "workspace:*"
+    "@attest/core": "workspace:*",
+    "@attest/schema": "workspace:*"
   }
 }

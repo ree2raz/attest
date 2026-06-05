@@ -153,3 +153,72 @@ WU5/WU7/WU8. Migrated + green: schema, diff, symbols.
 
 **Next:** WU5 — `@attest/core` (load manifest, the three verifiers, undeclared
 detection, assemble verdict — the heart, judgment-heavy).
+
+## WU5 — `@attest/core` verification engine (2026-06-05)
+
+Clean-rebuilt `@attest/core` to v1.0 (deleted the v0.1 ts-morph/parse-diff/detector
+internals). The heart: route each claim to a verifier, detect undeclared changes,
+assemble a verdict that conforms to the corpus oracle.
+
+- **No fs execution, no LLM, no semantics in the path.** Base file content is read
+  from `repoRoot`; post-change content is **reconstructed deterministically** via
+  `@attest/diff` `applyFileDiff` (no worktree needed for structural verification).
+  `Sources` caches base/post content + symbols per run.
+- **Verifiers** (`src/verifiers/`): `file_change` (diff op match), `symbol_*`
+  (`diffSymbols` added/removed/modified + `locateSymbol`), `test_*` (diff hunk +
+  test-file classification + a **structural `covers` reference check** — token match
+  in added lines; unconfirmable → `unverifiable`, never a guess), `outcome` (compares
+  **injected** runner results — core never shells out), and unknown/behavioral kinds
+  → `unverifiable` with the `unsupported_claim_kind` LLM-review pointer (the Camp-3
+  guard; never fails the build).
+- **Undeclared moat** (`undeclared.ts`): walks the diff in order (so output matches
+  diff order) — declared files emit intra-file **symbol drift** (added/modified
+  symbols not named by a claim), undeclared files emit a file-level entry (suppressed
+  if allowlisted: lockfiles + generated dirs). Key correctness call: **test files are
+  skipped for symbol drift** — a declared test file's added `test_*`/`Test*` functions
+  are expected, not scope drift (this is what keeps py/go `honest` at zero undeclared).
+- **Exit policy** (§6.6): exit 0 iff every claim is `verified`/`unverifiable` AND zero
+  flagged undeclared; `unverifiable` never fails; allowlisted (suppressed) excluded
+  from `summary.undeclared`.
+- **Tests (27):** the **corpus regression oracle** — `verify()` run against all 13
+  cases, asserting the stable projection (result, exit_code, summary, claim id+status
+  - reason-presence, full undeclared field set + order) — plus unit tests for paths
+    the corpus doesn't reach (`symbol_removed`/`modified`, op mismatch, missing/failed
+    outcome, non-test path, unsupported kind). All 13 oracle cases pass across TS/Py/Go.
+- Green in isolation: build ✓, typecheck ✓, 27 tests ✓, eslint ✓, prettier ✓.
+
+**Reason text note:** the corpus does NOT assert exact `reason` strings (only
+presence). Core's reasons are close to the oracle text but need not byte-match.
+
+## WU6 — `@attest/runner` outcome execution + isolation (2026-06-05)
+
+New package `packages/runner` (SPEC §6.4). Executes `outcome` checks and returns
+results the CLI feeds straight into `verify` (`RunOutcomes` is assignable to core's
+`OutcomeResults`).
+
+- **Worktree isolation is a correctness requirement, not polish.** `createWorktree`
+  makes a detached `git worktree` at `baseRef` (default HEAD), optionally **applies
+  the diff** to reach the post-change state, runs commands there, and always cleans up
+  (idempotent). Commands never touch the live working tree. (Untrusted-code container
+  isolation remains a Phase-3 gap — deliberately not closed by a worktree-less shortcut.)
+- **Command resolution** (`detect.ts`): explicit `RunnerConfig` (build/test/lint_cmd)
+  wins; else auto-detect — Node (package.json scripts, PM from lockfile), Go (`go
+test/build/vet ./...`), Python (`pytest`; build/lint declined as too variable),
+  Makefile targets. **No command resolvable → the check is omitted**, so core marks it
+  `unverifiable` rather than guessing.
+- **Execution** (`exec.ts`): `sh -c`, captures exit code, wall-clock duration, and
+  head/tail-**truncated** combined log; a timeout/kill maps to exit 124 (fails, never
+  silently passes).
+- Config-file parsing (attest.toml/json) is intentionally the CLI's job (WU7); the
+  runner takes a `RunnerConfig` object.
+- **Tests (16):** pure detection table + real-temp-git-repo execution proving exit-code
+  capture, **isolation** (a `touch SENTINEL` side effect never leaks to the repo),
+  **diff application** (post-change file present only with the diff), log truncation,
+  unresolved-check omission, and zero leftover worktrees. Green in isolation: build ✓,
+  typecheck ✓, 16 tests ✓, eslint ✓, prettier ✓.
+
+**Migrated + green:** schema, diff, symbols, core, runner (140 tests total).
+**Still expected-red:** `@attest/cli`, `@attest/detectors-ts` (v0.1 API) until WU7/WU8.
+
+**Next:** WU7 — `@attest/cli` (wire manifest+diff+runner+core; human/JSON render;
+config-file loading; `attest verify` / `attest schema`).

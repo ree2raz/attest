@@ -1,64 +1,42 @@
-import type { Manifest } from "@attest/schema";
-import type { Detector } from "./detector.js";
+import type { Manifest, OutcomeCheck } from "@attest/schema";
+import type { ParsedDiff } from "@attest/diff";
 
-export type Verdict = "verified" | "unverified" | "partial" | "unverifiable";
-
-/** Reason codes emitted by the verifier routing layer (not by individual detectors). */
-export type CoreReasonCode = "detector_not_implemented" | "unsupported_check";
-
-export interface Evidence {
-  kind: string;
-  path?: string;
-  symbol?: string;
-  note?: string;
+/**
+ * Result of executing one declared `outcome` check. Produced by `@attest/runner`
+ * and injected into `verify` — core never shells out, keeping the verification
+ * path pure and deterministic (the runner owns isolation + execution).
+ */
+export interface OutcomeResult {
+  passed: boolean;
+  cmd?: string;
+  exitCode?: number;
+  durationMs?: number;
 }
 
-export interface ClaimResult {
-  claim_id: string;
-  verdict: Verdict;
-  /** Either a CoreReasonCode or a detector-specific reason code. */
-  reason_code?: string;
-  evidence: Evidence[];
+/** Injected outcome results, keyed by the check they satisfy. */
+export type OutcomeResults = Partial<Record<OutcomeCheck, OutcomeResult>>;
+
+/**
+ * Configuration affecting verification (SPEC §6.3 allowlist, test classification).
+ * All fields optional; sensible defaults are applied in config.ts.
+ */
+export interface AttestConfig {
+  /** Extra basenames treated as allowlisted (suppressed) undeclared changes. */
+  allowlistBasenames?: string[];
+  /** Extra path segments (directory names) treated as generated/allowlisted. */
+  allowlistDirs?: string[];
+  /** Extra path prefixes classified as test locations. */
+  testGlobsExtra?: string[];
 }
 
-export interface UndeclaredFinding {
-  type: "file" | "symbol";
-  path: string;
-  symbol?: string;
-}
-
-export interface VerdictReport {
-  manifest_hash: string;
-  summary: {
-    total_claims: number;
-    verified: number;
-    unverified: number;
-    partial: number;
-    unverifiable: number;
-    undeclared_files: number;
-    undeclared_symbols: number;
-  };
-  claims: ClaimResult[];
-  undeclared: UndeclaredFinding[];
-  reviewer_focus: Array<{ claim_id?: string; undeclared?: UndeclaredFinding; reason: string }>;
-}
-
-export interface DiffChange {
-  path: string;
-  kind: "added" | "modified" | "deleted";
-  hunks: unknown[];
-}
-
-export interface DiffSet {
-  changes: DiffChange[];
-}
-
+/** Inputs to `verify` (SPEC §6.1). */
 export interface VerifyInput {
   manifest: Manifest;
-  /** Raw bytes of the manifest file; used to compute manifest_hash via SHA-256. */
-  manifestRawBytes: Uint8Array;
-  diff: DiffSet;
+  /** Parsed diff (base → post). The diff applies to `repoRoot`'s pre-change state. */
+  diff: ParsedDiff;
+  /** Pre-change repository root; base file contents are read from here. */
   repoRoot: string;
-  /** Detector registry, injected by the CLI after importing @attest/detectors-ts. */
-  detectors: Detector[];
+  config?: AttestConfig;
+  /** Outcome-check results from the runner; absent checks → `unverifiable`. */
+  outcomes?: OutcomeResults;
 }

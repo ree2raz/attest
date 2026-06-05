@@ -74,3 +74,39 @@ tuned, but statuses/exit codes/undeclared sets are fixed.
 cells are unfilled — well-bounded routine follow-on (copy the TS pattern).
 
 **Next:** WU3 — `@attest/diff` (extract unified-diff parsing into its own package).
+
+## WU3 — `@attest/diff` unified-diff parser (2026-06-05)
+
+New package `packages/diff` (SPEC §5, §6.2/§6.3). **Self-contained parser — no
+third-party diff lib** (v0.1 used `parse-diff`); the verification path must be
+deterministic and fully ours, and the corpus is the oracle for the model.
+
+- **Model** (`types.ts`): `ParsedDiff → FileDiff[]`; each `FileDiff` has `op`
+  (`create`/`modify`/`delete`, named to match the manifest `file_change.op` so the
+  verifier compares without translation), `path`/`oldPath`/`newPath`, `binary`, and
+  `Hunk[]`. Each `DiffLine` carries both `oldLine`/`newLine` so a consumer can
+  reconstruct pre-/post state without re-parsing.
+- **Parser** (`parse.ts`): handles `diff --git`, `new file`/`deleted file`,
+  `rename from`/`to` (surfaced as **delete(old) + create(new)** per spec), `---`/`+++`
+  with `a/`,`b/`,`/dev/null`, `@@` headers (omitted counts default to 1), and binary
+  markers. Key correctness point: a zero-length line terminates a hunk body — git
+  encodes a blank context line as a single space, so `""` is only the trailing
+  split-on-`\n` artifact (this bit the first test run; now explicit).
+- **Reconstruction** (`apply.ts`): `applyFileDiff(base, fileDiff)` rebuilds
+  post-change content (SPEC §6.2 "reconstruct from base + diff") for the symbols
+  verifier; **throws on context/deletion mismatch** rather than silently mis-patching
+  a wrong base. Phase-1 assumption: newline-terminated files (the `\ No newline`
+  case is an unexercised bounded follow-on).
+- **Queries** (`query.ts`): `changedPaths` (the `actual_files` of §6.3), `findFile`
+  (create side wins on rename collisions), `hunkCount` (`evidence.hunks`),
+  `added`/`removedLines`.
+- **Tests (54):** unit parse/apply + a **corpus oracle test** that reconstructs every
+  created/modified file from `base + change.diff` and asserts byte-equality with the
+  materialized `overlay/` — triangle consistency now enforced in code, not just by the
+  generator script. Green in isolation: build ✓, typecheck ✓, 54 tests ✓, eslint ✓,
+  prettier ✓.
+
+**Still expected-red:** `@attest/core`, `@attest/cli`, `@attest/detectors-ts`
+(v0.1 API) until WU5/WU7/WU8. `@attest/schema` + `@attest/diff` green in isolation.
+
+**Next:** WU4 — `@attest/symbols` (tree-sitter symbol extraction, TS/Py/Go).

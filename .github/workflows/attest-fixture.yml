@@ -1,0 +1,87 @@
+name: attest
+
+# Live documentation. The fixture workflow materialises a small TypeScript
+# repo, materialises one honest and one lying manifest, and asserts that the
+# honest case is green and the lying case is red. The same fixtures live in
+# corpus/ts/cases/ — this workflow just wires them into CI.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-honest:
+    name: honest (expect pass)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Materialise fixture repo
+        shell: bash
+        run: |
+          mkdir -p /tmp/attest-demo
+          cp -a "$GITHUB_WORKSPACE/corpus/ts/base/." /tmp/attest-demo/
+          cd /tmp/attest-demo
+          git init -q
+          git config user.email "ci@example.com"
+          git config user.name "ci"
+          git add -A
+          git commit -qm "base"
+
+      - name: Run attest
+        uses: ./
+        with:
+          manifest: corpus/ts/cases/honest/manifest.json
+          diff: corpus/ts/cases/honest/change.diff
+          repo-root: /tmp/attest-demo
+          format: human
+
+  verify-lying:
+    name: lying (expect fail)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Materialise fixture repo
+        shell: bash
+        run: |
+          mkdir -p /tmp/attest-demo
+          cp -a "$GITHUB_WORKSPACE/corpus/ts/base/." /tmp/attest-demo/
+          cd /tmp/attest-demo
+          git init -q
+          git config user.email "ci@example.com"
+          git config user.name "ci"
+          git add -A
+          git commit -qm "base"
+
+      - name: Run attest (lying manifest — expect non-zero exit)
+        id: attest
+        continue-on-error: true
+        uses: ./
+        with:
+          manifest: corpus/ts/cases/lying/manifest.json
+          diff: corpus/ts/cases/lying/change.diff
+          repo-root: /tmp/attest-demo
+          format: human
+
+      - name: Assert non-zero exit
+        if: steps.attest.outputs.exit-code == '0'
+        run: |
+          echo "expected non-zero exit on the lying manifest, got 0"
+          exit 1
+
+      - name: Assert result=fail
+        if: steps.attest.outputs.result != 'fail'
+        run: |
+          echo "expected result=fail, got ${{ steps.attest.outputs.result }}"
+          exit 1
+
+      - name: Assert result=fail
+        if: steps.attest.outputs.result != 'fail'
+        run: |
+          echo "expected result=fail, got ${{ steps.attest.outputs.result }}"
+          exit 1

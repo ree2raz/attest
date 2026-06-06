@@ -1,0 +1,76 @@
+name: "attest"
+description: "Deterministic, locally-runnable verifier for AI-agent change manifests. Closes the gap between what an agent claims it changed and what it actually changed."
+author: "ree2raz"
+
+branding:
+  icon: "check-circle"
+  color: "blue"
+
+inputs:
+  manifest:
+    description: "Path to the manifest JSON. Required."
+    required: true
+  diff:
+    description: "Path to a unified diff, or - for stdin. Defaults to 'git diff HEAD' against repo-root."
+    required: false
+    default: ""
+  repo-root:
+    description: "Repository root (defaults to the action's working directory)."
+    required: false
+    default: "."
+  format:
+    description: "Output format: human or json."
+    required: false
+    default: "human"
+  version:
+    description: "Pinned @attest/cli version (e.g. '1.0.0'). Use 'latest' to follow the newest release."
+    required: false
+    default: "1.0.0"
+
+outputs:
+  result:
+    description: "Verdict result: 'pass' or 'fail'."
+  exit-code:
+    description: "Process exit code: 0 = pass, 1 = verification fail, 2 = malformed manifest, 65 = data error, 66 = missing input, 70 = internal error."
+  verdict:
+    description: "Full verdict JSON (only populated when format=json)."
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+
+    - name: Run attest verify
+      id: verify
+      shell: bash
+      env:
+        NO_COLOR: "1"
+      run: |
+        set -euo pipefail
+        ARGS=(verify --manifest "${{ inputs.manifest }}" --repo-root "${{ inputs.repo-root }}" --format "${{ inputs.format }}")
+        if [ -n "${{ inputs.diff }}" ]; then
+          ARGS+=(--diff "${{ inputs.diff }}")
+        fi
+        # Tee to a temp file so we can recover the verdict for outputs even on
+        # non-zero exit (set -e is suspended by the leading `|| EXIT=$?`).
+        OUT=$(mktemp)
+        set +e
+        npx --yes "@attest/cli@${{ inputs.version }}" "${ARGS[@]}" > "$OUT" 2>&1
+        EXIT=$?
+        set -e
+        cat "$OUT"
+        echo "result=$(grep -o '"result":[[:space:]]*"\(pass\|fail\)"' "$OUT" | head -n1 | sed 's/.*"\(pass\|fail\)".*/\1/' || echo unknown)" >> "$GITHUB_OUTPUT"
+        echo "exit-code=$EXIT" >> "$GITHUB_OUTPUT"
+        if [ "${{ inputs.format }}" = "json" ]; then
+          # Extract the JSON object from the output (last valid {...} block).
+          VERDICT=$(awk '/^\{/{p=1} p{print} /^\}$/{p=0; exit}' "$OUT" || true)
+          VERDICT="${VERDICT//'%'/'%25'}"
+          VERDICT="${VERDICT//$'\n'/'%0A'}"
+          VERDICT="${VERDICT//$'\r'/'%0D'}"
+          echo "verdict=$VERDICT" >> "$GITHUB_OUTPUT"
+        fi
+        rm -f "$OUT"
+        exit $EXIT

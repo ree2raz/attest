@@ -3,7 +3,7 @@ import { readFile, access } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { constants } from "node:fs";
 import { resolve, isAbsolute } from "node:path";
-import { createManifestValidator } from "@attest/schema";
+import { createManifestValidator, formatValidationErrors } from "@attest/schema";
 import { parseDiff } from "@attest/diff";
 import { verify } from "@attest/core";
 import { runOutcomes } from "@attest/runner";
@@ -11,9 +11,20 @@ import { renderHuman } from "../render/human.js";
 import { renderJson } from "../render/json.js";
 import { loadConfig } from "../config.js";
 
+// Exit code contract (MVP §done-gate 4):
+//   0  pass
+//   1  verification fail (claims failed, undeclared changes, etc. — see SPEC §6.6)
+//   2  manifest is structurally malformed — distinct from verification fail so CI
+//      signals stay meaningful: 2 means "the manifest is bad, don't even look at
+//      the diff"; 1 means "the diff doesn't match the manifest".
+//   65 EX_DATAERR — input is parseable but the file format is wrong (e.g. JSON
+//      parse error)
+//   66 EX_NOINPUT — required file is missing
+//   70 EX_INTERNAL — internal software error
 const EX_DATAERR = 65;
 const EX_NOINPUT = 66;
 const EX_INTERNAL = 70;
+const EX_MANIFEST_INVALID = 2;
 
 export class VerifyCommand extends Command {
   static override paths = [["verify"]];
@@ -81,10 +92,14 @@ export class VerifyCommand extends Command {
     const validator = createManifestValidator();
     const validation = validator.validate(manifestObj);
     if (!validation.ok) {
-      for (const err of validation.errors) {
-        stderr.write(`${err.path}: ${err.code}: ${err.message}\n`);
+      const lines = formatValidationErrors(validation.errors);
+      stderr.write(
+        `error: manifest is structurally invalid (${lines.length} issue${lines.length === 1 ? "" : "s"})\n`,
+      );
+      for (const line of lines) {
+        stderr.write(`  ${line}\n`);
       }
-      return EX_DATAERR;
+      return EX_MANIFEST_INVALID;
     }
     const manifestData = validation.value;
 

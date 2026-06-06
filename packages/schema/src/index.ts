@@ -41,6 +41,8 @@ export type {
 export {
   createManifestValidator,
   createVerdictValidator,
+  formatValidationError,
+  formatValidationErrors,
   MANIFEST_SCHEMA,
   VERDICT_SCHEMA,
   AUDIT_SCHEMA,

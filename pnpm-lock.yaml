@@ -46,9 +46,15 @@ importers:
       "@attest/schema":
         specifier: workspace:*
         version: link:../schema
+      "@attest/symbols":
+        specifier: workspace:*
+        version: link:../symbols
       clipanion:
         specifier: ^3.2.1
         version: 3.2.1(typanion@3.14.0)
+      web-tree-sitter:
+        specifier: 0.22.6
+        version: 0.22.6
     devDependencies:
       tsup:
         specifier: ^8.5.1

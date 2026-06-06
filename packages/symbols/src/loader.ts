@@ -11,8 +11,20 @@ import type { Lang } from "./types.js";
  *
  * `grammars/` sits one level above both `src/` (vitest) and `dist/` (built), so
  * the same relative path resolves in either case.
+ *
+ * Bundled-CLI override (WU11): the @attest/cli bundles this module, so
+ * `import.meta.url` resolves to the CLI's dist file — the default
+ * `<dist>/../grammars` path would be wrong. Call `setGrammarsDir` once at CLI
+ * startup to point at the CLI's own vendored `grammars/` directory before the
+ * first `parse()` call.
  */
-const grammarsDir = join(dirname(fileURLToPath(import.meta.url)), "..", "grammars");
+let grammarsDir: string = join(dirname(fileURLToPath(import.meta.url)), "..", "grammars");
+
+/** Override the directory grammar `.wasm` files are loaded from. Must be called
+ *  before any `parse()` call; later calls are ignored (cache is already populated). */
+export function setGrammarsDir(dir: string): void {
+  grammarsDir = dir;
+}
 
 const GRAMMAR_FILE: Record<Lang, string> = {
   ts: "tree-sitter-typescript.wasm",

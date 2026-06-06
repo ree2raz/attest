@@ -2,16 +2,29 @@
   "name": "@attest/cli",
   "version": "1.0.0",
   "type": "module",
+  "description": "Deterministic, locally-runnable verifier for AI-agent change manifests. Closes the gap between what an agent claims it changed and what it actually changed.",
+  "keywords": [
+    "ai",
+    "agent",
+    "verification",
+    "attest",
+    "spec-driven",
+    "manifest",
+    "diff"
+  ],
   "bin": {
     "attest": "./dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "grammars"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && node scripts/copy-grammars.mjs",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepack": "pnpm build && node scripts/strip-workspace-deps.mjs",
+    "postpack": "node scripts/restore-package.mjs"
   },
   "devDependencies": {
     "tsup": "^8.5.1",
@@ -22,6 +35,21 @@
     "@attest/diff": "workspace:*",
     "@attest/runner": "workspace:*",
     "@attest/schema": "workspace:*",
-    "clipanion": "^3.2.1"
+    "@attest/symbols": "workspace:*",
+    "clipanion": "^3.2.1",
+    "web-tree-sitter": "0.22.6"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ree2raz/attest.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/ree2raz/attest#readme",
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

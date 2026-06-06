@@ -1,0 +1,12 @@
+diff --git a/calc.go b/calc.go
+index 6b2fe19..4fb4e8c 100644
+--- a/calc.go
++++ b/calc.go
+@@ -3,3 +3,7 @@ package calc
+ func Add(a, b int) int {
+ 	return a + b
+ }
++
++func Multiply(a, b int) int {
++	return a * b
++}

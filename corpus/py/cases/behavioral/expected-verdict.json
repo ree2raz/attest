@@ -1,0 +1,17 @@
+{
+  "attest_version": "1.0",
+  "task_id": "py-behavioral",
+  "result": "pass",
+  "exit_code": 0,
+  "claims": [
+    { "id": "c1", "status": "verified" },
+    { "id": "c2", "status": "verified" },
+    {
+      "id": "c3",
+      "status": "unverifiable",
+      "reason": "claim kind 'behavior_present' is semantic/behavioral and outside attest's structural taxonomy (unsupported_claim_kind); route to LLM/semantic review"
+    }
+  ],
+  "undeclared_changes": [],
+  "summary": { "claims_total": 3, "verified": 2, "failed": 0, "unverifiable": 1, "undeclared": 0 }
+}

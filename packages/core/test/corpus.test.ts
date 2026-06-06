@@ -66,7 +66,7 @@ const cases = discoverCases();
 
 describe("corpus regression oracle — verify() conforms to expected-verdict.json", () => {
   it("discovers all fixture cases", () => {
-    expect(cases.length).toBe(13);
+    expect(cases.length).toBe(21);
   });
 
   for (const c of cases) {

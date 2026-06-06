@@ -1,6 +1,5 @@
 node_modules/
 dist/
-.changeset/*.md
 *.tsbuildinfo
 coverage/
 .env

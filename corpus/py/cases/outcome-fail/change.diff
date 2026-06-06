@@ -1,0 +1,27 @@
+diff --git a/src/calc.py b/src/calc.py
+index e1829c3..6b96d15 100644
+--- a/src/calc.py
++++ b/src/calc.py
+@@ -1,2 +1,6 @@
+ def add(a: int, b: int) -> int:
+     return a + b
++
++
++def multiply(a: int, b: int) -> int:
++    return a * b
+diff --git a/tests/test_calc.py b/tests/test_calc.py
+index 45cd537..4e59d99 100644
+--- a/tests/test_calc.py
++++ b/tests/test_calc.py
+@@ -1,5 +1,10 @@
+-from src.calc import add
++from src.calc import add, multiply
+ 
+ 
+ def test_add():
+     assert add(2, 3) == 5
++
++
++def test_multiply():
++    # Wrong on purpose: this test fails (multiply(2, 3) is 6, not 9)
++    assert multiply(2, 3) == 9

@@ -74,13 +74,10 @@ affect the exit code.
 | lang   | honest | lying | partial | undeclared | allowlisted | outcome-fail | behavioral |
 | ------ | ------ | ----- | ------- | ---------- | ----------- | ------------ | ---------- |
 | ts     | ✅     | ✅    | ✅      | ✅         | ✅          | ✅           | ✅         |
-| python | ✅     | ✅    | —       | ✅         | —           | —            | —          |
-| go     | ✅     | ✅    | —       | ✅         | —           | —            | —          |
+| python | ✅     | ✅    | ✅      | ✅         | ✅          | ✅           | ✅         |
+| go     | ✅     | ✅    | ✅      | ✅         | ✅          | ✅           | ✅         |
 
-TypeScript is the full reference set. Python/Go currently carry the core trio
-(honest/lying/undeclared) that proves language-agnostic structural verification and
-the undeclared-change moat. Filling the remaining Py/Go cells is well-bounded
-follow-on work (ideal for a routine, SPEC §11.2) — extend by copying the TS pattern.
+All 21 cases (7 × 3 languages) are the regression oracle. CI runs them on every commit.
 
 ## Regenerating
 

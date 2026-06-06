@@ -1,0 +1,26 @@
+{
+  "attest_version": "1.0",
+  "task": {
+    "id": "go-behavioral",
+    "description": "Add Multiply() and enforce input validation on it"
+  },
+  "agent": { "id": "claude-code", "model": "claude-opus-4-8", "tool_calls": 4 },
+  "generated_at": "2026-06-06T00:00:00Z",
+  "declared_scope": { "files": ["calc.go"] },
+  "claims": [
+    { "id": "c1", "kind": "file_change", "op": "modify", "path": "calc.go" },
+    {
+      "id": "c2",
+      "kind": "symbol_added",
+      "path": "calc.go",
+      "symbol": "Multiply",
+      "symbol_kind": "function"
+    },
+    {
+      "id": "c3",
+      "kind": "behavior_present",
+      "path": "calc.go",
+      "property": "input_validation"
+    }
+  ]
+}

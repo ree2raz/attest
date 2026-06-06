@@ -1,0 +1,54 @@
+
+── The partial case — agent edited three files but only declared two. expect: fail (undeclared) ──
+
+── Materialise the fixture repo in /tmp/tmp.1vxIE5F7U9 ──
+
+── Manifest — what the agent claims (partial) ──
+{
+  "attest_version": "1.0",
+  "task": { "id": "ts-partial", "description": "Add login() to auth with a covering test" },
+  "agent": { "id": "claude-code", "model": "claude-opus-4-8", "tool_calls": 3 },
+  "generated_at": "2026-06-04T00:00:00Z",
+  "declared_scope": { "files": ["src/auth.ts", "tests/auth.test.ts"] },
+  "claims": [
+    { "id": "c1", "kind": "file_change", "op": "modify", "path": "src/auth.ts" },
+    {
+      "id": "c2",
+      "kind": "symbol_added",
+      "path": "src/auth.ts",
+      "symbol": "login",
+      "symbol_kind": "function"
+    },
+    { "id": "c3", "kind": "test_added", "path": "tests/auth.test.ts", "covers": "login" }
+  ]
+}
+
+── Diff — what the agent actually changed ──
+diff --git a/src/auth.ts b/src/auth.ts
+index db03973..a2d2cb1 100644
+--- a/src/auth.ts
++++ b/src/auth.ts
+@@ -5,3 +5,7 @@ export function hashToken(token: string): string {
+   }
+   return (h >>> 0).toString(16);
+ }
++
++export function login(user: string, token: string): boolean {
++  return user.length > 0 && hashToken(token).length > 0;
++}
+
+── Run: node /home/rituraj/Projects/attest/packages/cli/dist/index.js verify --manifest ... --diff ... --repo-root /tmp/tmp.0fKm69HMDl ──
+attest v1.0
+Task: ts-partial  —  Add login() to auth with a covering test
+Agent: claude-code · claude-opus-4-8, 3 tool calls
+
+Claims (3):
+  ✓ c1  file_change  modify  src/auth.ts
+  ✓ c2  symbol_added  login (function)  src/auth.ts
+  ✗ c3  test_added  tests/auth.test.ts  covers: login  → no change detected for tests/auth.test.ts
+
+Summary: 2 verified · 1 failed · 0 unverifiable · 0 undeclared
+Result: FAIL
+
+exit code: 1 (expected 1 — fail (undeclared change))
+✓ matches expectation\n

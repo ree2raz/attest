@@ -1,0 +1,60 @@
+
+── The lying case — agent says it added login() AND logout(). The diff only adds login(). expect: fail ──
+
+── Materialise the fixture repo in /tmp/tmp.Maw90wf6zc ──
+
+── Manifest — what the agent claims (lying) ──
+{
+  "attest_version": "1.0",
+  "task": { "id": "ts-lying", "description": "Add login() and logout() to auth" },
+  "agent": { "id": "claude-code", "model": "claude-opus-4-8", "tool_calls": 3 },
+  "generated_at": "2026-06-04T00:00:00Z",
+  "declared_scope": { "files": ["src/auth.ts"] },
+  "claims": [
+    { "id": "c1", "kind": "file_change", "op": "modify", "path": "src/auth.ts" },
+    {
+      "id": "c2",
+      "kind": "symbol_added",
+      "path": "src/auth.ts",
+      "symbol": "login",
+      "symbol_kind": "function"
+    },
+    {
+      "id": "c3",
+      "kind": "symbol_added",
+      "path": "src/auth.ts",
+      "symbol": "logout",
+      "symbol_kind": "function"
+    }
+  ]
+}
+
+── Diff — what the agent actually changed ──
+diff --git a/src/auth.ts b/src/auth.ts
+index db03973..a2d2cb1 100644
+--- a/src/auth.ts
++++ b/src/auth.ts
+@@ -5,3 +5,7 @@ export function hashToken(token: string): string {
+   }
+   return (h >>> 0).toString(16);
+ }
++
++export function login(user: string, token: string): boolean {
++  return user.length > 0 && hashToken(token).length > 0;
++}
+
+── Run: node /home/rituraj/Projects/attest/packages/cli/dist/index.js verify --manifest ... --diff ... --repo-root /tmp/tmp.Dkxe2p4Dxr ──
+attest v1.0
+Task: ts-lying  —  Add login() and logout() to auth
+Agent: claude-code · claude-opus-4-8, 3 tool calls
+
+Claims (3):
+  ✓ c1  file_change  modify  src/auth.ts
+  ✓ c2  symbol_added  login (function)  src/auth.ts
+  ✗ c3  symbol_added  logout (function)  src/auth.ts  → symbol 'logout' (function) was not added in src/auth.ts
+
+Summary: 2 verified · 1 failed · 0 unverifiable · 0 undeclared
+Result: FAIL
+
+exit code: 1 (expected 1 — fail (claim c3 — symbol 'logout' was not added))
+✓ matches expectation\n

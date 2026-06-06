@@ -4,6 +4,19 @@
 
 `attest` is a deterministic, locally-runnable CLI tool. An AI agent emits a structured JSON manifest describing its changes; `attest verify` checks each claim against the actual diff and produces a structured verdict. No LLM in the verification path. No SaaS dependency. Apache-2.0 licensed.
 
+## The 30-second pitch
+
+```bash
+npx @attest/cli verify \
+  --manifest .attest/manifest.json \
+  --diff change.diff \
+  --repo-root .
+```
+
+If the agent said it added `login()` and a test, the diff has `login()` and a test, and the test suite passes, you get a `pass` and exit 0. If the agent said it added `login()` and `logout()` but the diff only has `login()`, you get a `fail` with the specific claim that wasn't honored and exit 1. If the manifest is structurally wrong (wrong kind, missing field, wrong enum on the version), you get a path-pointed error and exit 2. See [docs/demo/lying-case.txt](docs/demo/lying-case.txt) for the worked example.
+
+The full agent-facing contract (paste-in for your agent's instructions) is in [docs/manifest-contract.md](docs/manifest-contract.md).
+
 ## What attest does — and what it deliberately does not
 
 attest verifies **that** an agent did what it claimed — structurally, and that the declared build/test/lint commands actually ran and passed. That's the whole promise, and it's a deterministic one.
@@ -16,7 +29,7 @@ What it does **not** do, by design:
 
 In one line: **attest guarantees structural compliance and execution success; it delegates semantic correctness to the operator.** See [SPEC §2](docs/SPEC.md) for the full scope boundary.
 
-## 20-minute zero-to-first-verdict
+## 5-minute zero-to-first-verdict
 
 ### 1. Install
 
@@ -26,18 +39,22 @@ The CLI is `npx`-installable as `@attest/cli` (Node ≥ 20):
 npx @attest/cli --version
 ```
 
-Or build from source:
+That's it for the install — no global install, no service account, no API key. The GitHub Action is `ree2raz/attest@v1` (see [WU13 release notes](#github-action)).
+
+### 2. Try the TypeScript example
+
+The `corpus/ts/base/` directory is a small TypeScript project. The fastest way to see attest work is to run the bundled demo script:
 
 ```bash
 git clone https://github.com/ree2raz/attest
 cd attest
-pnpm install
-pnpm build
+pnpm install && pnpm build
+./scripts/demo.sh both     # runs the honest + lying cases
 ```
 
-### 2. Try the TypeScript example
+`./scripts/demo.sh honest` produces a `pass` (the agent's claim matches the diff); `./scripts/demo.sh lying` produces a `fail` with the specific claim that wasn't honored. See [docs/demo/](docs/demo/) for the captured transcripts.
 
-The `corpus/ts/base/` directory is a small TypeScript project. Let's verify a change:
+For the manual walkthrough, the same fixtures in the repo:
 
 ```bash
 # Materialize the base project
@@ -48,29 +65,12 @@ git init -q
 git add -A
 git commit -qm "base"
 
-# Verify the "honest" case: agent claims it added login() to src/auth.ts
-attest verify \
+# Verify the "honest" case
+npx @attest/cli verify \
   --manifest /path/to/attest/corpus/ts/cases/honest/manifest.json \
   --diff /path/to/attest/corpus/ts/cases/honest/change.diff \
   --repo-root /tmp/attest-demo \
   --format human
-```
-
-Output:
-
-```
-attest v1.0 · task: ts-honest
-
-Claims (5):
-  ✓ c1  file_change: modify src/auth.ts
-  ✓ c2  symbol_added: function login in src/auth.ts
-  ✓ c3  test_added: tests/auth.test.ts (covers login)
-  ✓ c4  outcome: tests_pass (npm test, 1.2s)
-  ✓ c5  outcome: build_passes (npm run build, 0.8s)
-
-Undeclared changes: 0
-
-Result: pass (exit 0)
 ```
 
 ### 3. Try Python or Go
@@ -82,7 +82,7 @@ cp -a corpus/py/base/. /tmp/attest-py/
 cd /tmp/attest-py
 git init -q && git add -A && git commit -qm "base"
 
-attest verify \
+npx @attest/cli verify \
   --manifest /path/to/attest/corpus/py/cases/honest/manifest.json \
   --diff /path/to/attest/corpus/py/cases/honest/change.diff \
   --repo-root /tmp/attest-py
@@ -93,11 +93,32 @@ cp -a corpus/go/base/. /tmp/attest-go/
 cd /tmp/attest-go
 git init -q && git add -A && git commit -qm "base"
 
-attest verify \
+npx @attest/cli verify \
   --manifest /path/to/attest/corpus/go/cases/honest/manifest.json \
-  --diff /path/to/attest/go/cases/honest/change.diff \
+  --diff /path/to/attest/corpus/go/cases/honest/change.diff \
   --repo-root /tmp/attest-go
 ```
+
+### 4. In CI
+
+```yaml
+# .github/workflows/attest.yml
+name: attest
+on: [pull_request]
+permissions: { contents: read }
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ree2raz/attest@v1
+        with:
+          manifest: .attest/manifest.json
+          diff: change.diff
+          repo-root: .
+```
+
+The action fails the check on unverified claims or undeclared changes; pass yields exit 0 (check green), fail yields exit 1 (check red), malformed manifest yields exit 2 (check red, distinct).
 
 ## Manifest format (v1.0)
 
@@ -227,6 +248,42 @@ The supported usage, therefore, is: **run attest on your own change**, locally o
 
 Container/VM isolation for executing genuinely untrusted code is a later-phase item ([SPEC §6.4](docs/SPEC.md), §8). Until it lands, attest is a verification gate for code you were going to run anyway — not a sandbox for code you weren't.
 
+## GitHub Action
+
+The action lives at the repo root as `action.yml` and is published under
+`ree2raz/attest`. It is a composite action that runs `npx @attest/cli@<version>`
+under the hood and propagates the exit code to the check. Inputs:
+`manifest` (required), `diff` (optional, defaults to `git diff HEAD`),
+`repo-root` (defaults to the workflow's working directory), `format`
+(`human` or `json`), and `version` (defaults to `1.0.0`). Outputs: `result`
+(`pass` or `fail`), `exit-code`, and `verdict` (only when `format=json`).
+
+The marketplace acceptance fixture is `.github/workflows/attest-fixture.yml`,
+which runs the corpus's `honest` and `lying` cases against the action on every
+push and PR.
+
+## Contributing / building from source
+
+The `npx` path is the supported install. If you're hacking on attest itself
+(a new detector, a new language, a bug fix in the diff parser), build from source:
+
+```bash
+git clone https://github.com/ree2raz/attest
+cd attest
+pnpm install
+pnpm build
+pnpm test
+```
+
+The pre-push gate (`.husky/pre-push`) runs `pnpm lint && pnpm build && pnpm test`.
+The 21-case fixture corpus under `corpus/` is the regression oracle; a change
+that breaks an oracle case is wrong by definition (SPEC §10). To run the
+acceptance test against the corpus:
+
+```bash
+pnpm --filter @attest/cli test -- corpus.test.ts
+```
+
 ## Packages
 
 | Package                | Description                                                       |
@@ -236,7 +293,7 @@ Container/VM isolation for executing genuinely untrusted code is a later-phase i
 | `@attest/symbols`      | Language-agnostic symbol extraction (TypeScript, Python, Go)      |
 | `@attest/core`         | Verifier orchestration, undeclared-changes detector               |
 | `@attest/runner`       | Outcome execution (worktree isolation, command resolution)        |
-| `@attest/cli`          | `attest verify` command                                           |
+| `@attest/cli`          | `attest verify`, `attest init`, `attest schema` (npx-installable) |
 | `@attest/detectors-ts` | TypeScript authentication detector (demoted, opt-in, best-effort) |
 
 ## Corpus (regression oracle)

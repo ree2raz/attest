@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://attest.dev/schema/verdict/v1.0.json",
+  "title": "attest verdict",
+  "description": "Structured verification result (SPEC §4.2). The JSON is the source of truth; the human view is a rendering of it, and it is the input to the audit record.",
+  "type": "object",
+  "required": [
+    "attest_version",
+    "task_id",
+    "result",
+    "exit_code",
+    "claims",
+    "undeclared_changes",
+    "summary"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "attest_version": { "const": "1.0" },
+    "task_id": { "type": "string", "minLength": 1 },
+    "result": { "enum": ["pass", "fail"] },
+    "exit_code": { "enum": [0, 1] },
+    "claims": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/claimResult" }
+    },
+    "undeclared_changes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/undeclaredChange" }
+    },
+    "summary": { "$ref": "#/$defs/summary" }
+  },
+  "$defs": {
+    "claimResult": {
+      "type": "object",
+      "required": ["id", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["verified", "failed", "unverifiable"] },
+        "reason": { "type": "string" },
+        "evidence": { "type": "object" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "type": "object",
+            "required": ["status"],
+            "properties": { "status": { "const": "failed" } }
+          },
+          "then": { "type": "object", "required": ["reason"] }
+        },
+        {
+          "if": {
+            "type": "object",
+            "required": ["status"],
+            "properties": { "status": { "const": "unverifiable" } }
+          },
+          "then": { "type": "object", "required": ["reason"] }
+        }
+      ]
+    },
+    "undeclaredChange": {
+      "type": "object",
+      "required": ["path", "op", "granularity", "severity"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "op": { "enum": ["create", "modify", "delete"] },
+        "granularity": { "enum": ["file", "symbol"] },
+        "severity": { "enum": ["flag", "suppressed"] },
+        "symbol": { "type": "string", "minLength": 1 },
+        "symbol_kind": {
+          "enum": [
+            "function",
+            "method",
+            "class",
+            "interface",
+            "type",
+            "struct",
+            "enum",
+            "constant",
+            "variable"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "type": "object",
+            "required": ["granularity"],
+            "properties": { "granularity": { "const": "symbol" } }
+          },
+          "then": { "type": "object", "required": ["symbol"] }
+        }
+      ]
+    },
+    "summary": {
+      "type": "object",
+      "required": ["claims_total", "verified", "failed", "unverifiable", "undeclared"],
+      "additionalProperties": false,
+      "properties": {
+        "claims_total": { "type": "integer", "minimum": 0 },
+        "verified": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "unverifiable": { "type": "integer", "minimum": 0 },
+        "undeclared": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

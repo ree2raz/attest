@@ -1,0 +1,14 @@
+{
+  "attest_version": "1.0",
+  "task_id": "py-honest",
+  "result": "pass",
+  "exit_code": 0,
+  "claims": [
+    { "id": "c1", "status": "verified" },
+    { "id": "c2", "status": "verified" },
+    { "id": "c3", "status": "verified" },
+    { "id": "c4", "status": "verified" }
+  ],
+  "undeclared_changes": [],
+  "summary": { "claims_total": 4, "verified": 4, "failed": 0, "unverifiable": 0, "undeclared": 0 }
+}

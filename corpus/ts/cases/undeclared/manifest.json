@@ -1,0 +1,17 @@
+{
+  "attest_version": "1.0",
+  "task": { "id": "ts-undeclared", "description": "Add login() to auth" },
+  "agent": { "id": "claude-code", "model": "claude-opus-4-8", "tool_calls": 5 },
+  "generated_at": "2026-06-04T00:00:00Z",
+  "declared_scope": { "files": ["src/auth.ts"] },
+  "claims": [
+    { "id": "c1", "kind": "file_change", "op": "modify", "path": "src/auth.ts" },
+    {
+      "id": "c2",
+      "kind": "symbol_added",
+      "path": "src/auth.ts",
+      "symbol": "login",
+      "symbol_kind": "function"
+    }
+  ]
+}

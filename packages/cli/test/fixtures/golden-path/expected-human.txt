@@ -1,13 +1,13 @@
-🤖 Agent: claude-code (claude-opus-4-7) · 5 tool calls · 1 files touched
-📝 Task: Add login endpoint
+attest v1.0
+Task: add-login  —  Add login function to auth module
+Agent: claude-code · claude-opus-4-8, 3 tool calls
 
-📋 Declared changes (2):
-  ✅ c1  endpoint POST /login in src/routes/auth.ts
-  ❌ c2  no auth in chain at src/routes/auth.ts:POST /login
+Claims (2):
+  ✓ c1  file_change  modify  src/auth.ts
+  ✓ c2  symbol_added  login (function)  src/auth.ts
 
-⚠️ Undeclared modifications (1):
-  • src/routes/auth.ts — symbol `unlistedHelper` modified but not in any claim
+Undeclared changes (1 flagged):
+  ⚠ src/auth.ts  symbol _helper (function)  [flag]
 
-🔍 Reviewer focus:
-  1. c2 failed — authentication not detected
-  2. undeclared change to `unlistedHelper`
+Summary: 2 verified · 0 failed · 0 unverifiable · 1 undeclared
+Result: FAIL

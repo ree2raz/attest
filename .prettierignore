@@ -1,0 +1,13 @@
+**/dist/**
+**/node_modules/**
+
+# Corpus fixtures: base/ and overlay/ trees are byte-stable inputs that the
+# generated change.diff files derive from — reformatting them would silently
+# invalidate the diffs. The .diff files and shell tools have no prettier parser.
+corpus/**/base/**
+corpus/**/overlay/**
+corpus/**/*.diff
+corpus/tools/*.sh
+
+# Vendored prebuilt tree-sitter grammars (binary wasm) — no parser, never format.
+packages/symbols/grammars/**

@@ -1,0 +1,22 @@
+{
+  "attest_version": "1.0",
+  "task_id": "go-undeclared",
+  "result": "fail",
+  "exit_code": 1,
+  "claims": [
+    { "id": "c1", "status": "verified" },
+    { "id": "c2", "status": "verified" }
+  ],
+  "undeclared_changes": [
+    {
+      "path": "calc.go",
+      "op": "modify",
+      "granularity": "symbol",
+      "severity": "flag",
+      "symbol": "Subtract",
+      "symbol_kind": "function"
+    },
+    { "path": "util.go", "op": "create", "granularity": "file", "severity": "flag" }
+  ],
+  "summary": { "claims_total": 2, "verified": 2, "failed": 0, "unverifiable": 0, "undeclared": 2 }
+}

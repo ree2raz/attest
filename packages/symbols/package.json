@@ -1,0 +1,31 @@
+{
+  "name": "@attest/symbols",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "grammars"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "vendor-grammars": "node scripts/vendor-grammars.mjs"
+  },
+  "devDependencies": {
+    "tree-sitter-wasms": "^0.1.13",
+    "vitest": "^4.1.7"
+  },
+  "dependencies": {
+    "@attest/schema": "workspace:*",
+    "web-tree-sitter": "0.22.6"
+  }
+}

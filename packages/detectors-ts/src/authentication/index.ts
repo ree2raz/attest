@@ -1,189 +1,141 @@
-import { Project } from "ts-morph";
-import type { Claim } from "@attest/schema";
-import type { DetectorContext, DetectorVerdict } from "@attest/core";
-import type { KnownFramework } from "./types.js";
-import { collectChain } from "./chain.js";
+import { Project, type SourceFile } from "ts-morph";
+import {
+  DETECTOR_WARNINGS,
+  type AuthenticationInput,
+  type DetectorOutput,
+  type DetectorStatus,
+} from "../types.js";
+import { collectChain, type ChainEntry } from "./chain.js";
+import { detectFramework } from "./framework.js";
 
-// ─── Framework detection ───────────────────────────────────────────────────
+/**
+ * Run the (best-effort) authentication heuristic on a single
+ * `(path, symbol, content)` triple. Returns an *advisory* annotation —
+ * **never a verdict**. See SPEC §6.5 and `../types.ts` for the
+ * advisory/verdict boundary.
+ *
+ * Status mapping (preserved from the v0.1 detector for compatibility):
+ *
+ *   has auth in chain       → `advisory_present`
+ *   chain is empty/not-auth → `advisory_absent`
+ *   chain has "unknown"     → `advisory_inconclusive`
+ *   route missing / parse   → `advisory_inconclusive`
+ *
+ * `reason_code` matches the v0.1 vocabulary so the same fixtures (and any
+ * downstream tooling that read them) keep working.
+ */
+export async function detectAuthentication(input: AuthenticationInput): Promise<DetectorOutput> {
+  const { path, symbol, content } = input;
 
-const FRAMEWORK_IMPORTS: Array<{ pattern: string | RegExp; framework: KnownFramework }> = [
-  { pattern: "express", framework: "express" },
-  { pattern: "fastify", framework: "fastify" },
-  { pattern: "@nestjs/common", framework: "nestjs" },
-  { pattern: "@nestjs/core", framework: "nestjs" },
-  { pattern: "koa", framework: "koa" },
-  { pattern: "@koa/router", framework: "koa" },
-  { pattern: "http", framework: "rawnode" },
-  { pattern: "https", framework: "rawnode" },
-  { pattern: "node:http", framework: "rawnode" },
-  { pattern: "node:https", framework: "rawnode" },
-];
-
-function detectFramework(content: string): KnownFramework | null {
-  // Quick scan using regex to avoid full parse for this step
-  for (const { pattern, framework } of FRAMEWORK_IMPORTS) {
-    const escaped =
-      typeof pattern === "string" ? pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : pattern.source;
-    const re = new RegExp(`from\\s+["']${escaped}["']`);
-    if (re.test(content)) return framework;
-  }
-  return null;
-}
-
-// ─── Verdict computation ───────────────────────────────────────────────────
-
-function computeVerdictFromChain(
-  chain: ReturnType<typeof collectChain>,
-  path: string,
-  symbol: string,
-): DetectorVerdict {
-  if (chain === "not_found") {
+  const framework = detectFramework(content);
+  if (!framework) {
     return {
-      verdict: "unverified",
-      reason_code: "no_route_found",
-      evidence: [
-        { kind: "route", path, symbol },
-        { kind: "symbol", path, symbol, note: `route ${symbol} not found in file` },
-      ],
+      detector: "authentication",
+      path,
+      symbol,
+      framework: "unknown",
+      status: "advisory_inconclusive",
+      reason_code: "framework_unsupported",
+      note: "no recognized framework import found in file",
+      evidence: [],
+      warnings: DETECTOR_WARNINGS,
     };
   }
 
-  // Route summary entry (no note — required by spec)
-  const routeSummary = { kind: "route" as const, path, symbol };
+  let sourceFile: SourceFile;
+  try {
+    const project = new Project({
+      useInMemoryFileSystem: true,
+      skipAddingFilesFromTsConfig: true,
+    });
+    sourceFile = project.createSourceFile(path, content);
+  } catch (err) {
+    return {
+      detector: "authentication",
+      path,
+      symbol,
+      framework,
+      status: "advisory_inconclusive",
+      reason_code: "parse_error",
+      note: `parse error: ${String(err)}`,
+      evidence: [],
+      warnings: DETECTOR_WARNINGS,
+    };
+  }
 
-  const chainEvidence = chain.map((entry) => ({
-    kind: "middleware" as const,
-    symbol: entry.name,
-    note: `classified ${entry.classification} via ${entry.layer}`,
-  }));
+  const chain = collectChain(sourceFile, framework, symbol);
+  return chainToOutput(path, symbol, framework, chain);
+}
+
+function chainToOutput(
+  path: string,
+  symbol: string,
+  framework: string,
+  chain: ChainEntry[] | "not_found",
+): DetectorOutput {
+  if (chain === "not_found") {
+    return {
+      detector: "authentication",
+      path,
+      symbol,
+      framework,
+      status: "advisory_absent",
+      reason_code: "no_route_found",
+      note: `route ${symbol} not found in file`,
+      evidence: [{ kind: "route", symbol }],
+      warnings: DETECTOR_WARNINGS,
+    };
+  }
 
   const hasAuth = chain.some((e) => e.classification === "auth");
   const hasUnknown = chain.some((e) => e.classification === "unknown");
   const allNotAuth = chain.length > 0 && chain.every((e) => e.classification === "not-auth");
 
+  let status: DetectorStatus;
+  let reason_code: string | undefined;
   if (hasAuth) {
-    return {
-      verdict: "verified",
-      evidence: [routeSummary, ...chainEvidence],
-    };
+    status = "advisory_present";
+  } else if (hasUnknown) {
+    status = "advisory_inconclusive";
+    reason_code = "unknown_middleware_only";
+  } else if (allNotAuth || chain.length === 0) {
+    status = "advisory_absent";
+    reason_code = "no_auth_in_chain";
+  } else {
+    status = "advisory_absent";
+    reason_code = "no_auth_in_chain";
   }
 
-  if (allNotAuth || chain.length === 0) {
-    return {
-      verdict: "unverified",
-      reason_code: "no_auth_in_chain",
-      evidence: [routeSummary, ...chainEvidence],
-    };
-  }
+  const evidence: DetectorOutput["evidence"] = [
+    { kind: "route", symbol },
+    ...chain.map((e) => ({
+      kind: "middleware" as const,
+      symbol: e.name,
+      note: `classified ${e.classification} via ${e.layer}`,
+    })),
+  ];
 
-  if (hasUnknown) {
-    return {
-      verdict: "partial",
-      reason_code: "unknown_middleware_only",
-      evidence: [routeSummary, ...chainEvidence],
-    };
-  }
-
-  // All not-auth (fallback)
   return {
-    verdict: "unverified",
-    reason_code: "no_auth_in_chain",
-    evidence: [routeSummary, ...chainEvidence],
+    detector: "authentication",
+    path,
+    symbol,
+    framework,
+    status,
+    ...(reason_code ? { reason_code } : {}),
+    note: summaryNote(status, chain),
+    evidence,
+    warnings: DETECTOR_WARNINGS,
   };
 }
 
-// ─── Public API ────────────────────────────────────────────────────────────
-
-export async function detectAuthentication(
-  claim: Claim,
-  ctx: DetectorContext,
-): Promise<DetectorVerdict> {
-  const { target, verification_contract: vc } = claim;
-
-  // Validate claim shape
-  if (target.kind !== "endpoint") {
-    return {
-      verdict: "unverifiable",
-      reason_code: "invalid_claim_shape",
-      evidence: [
-        {
-          kind: "symbol",
-          path: target.path,
-          note: `target.kind must be "endpoint", got "${target.kind}"`,
-        },
-      ],
-    };
+function summaryNote(status: DetectorStatus, chain: ChainEntry[]): string {
+  const names = chain.map((e) => e.name).join(", ");
+  switch (status) {
+    case "advisory_present":
+      return `auth signal found via ${names || "route"}`;
+    case "advisory_absent":
+      return chain.length === 0 ? "no middleware in chain" : `no auth signal in chain (${names})`;
+    case "advisory_inconclusive":
+      return `unresolved middleware in chain (${names})`;
   }
-
-  if (!target.symbol) {
-    return {
-      verdict: "unverifiable",
-      reason_code: "invalid_claim_shape",
-      evidence: [{ kind: "symbol", path: target.path, note: "target.symbol is required" }],
-    };
-  }
-
-  if (vc.params?.["property"] !== "authentication") {
-    return {
-      verdict: "unverifiable",
-      reason_code: "invalid_claim_shape",
-      evidence: [
-        {
-          kind: "symbol",
-          path: target.path,
-          note: `params.property must be "authentication"`,
-        },
-      ],
-    };
-  }
-
-  // Read file content
-  const content = await ctx.postDiffFile(target.path);
-  if (!content) {
-    return {
-      verdict: "unverifiable",
-      reason_code: "parse_error",
-      evidence: [{ kind: "symbol", path: target.path, note: "file not found" }],
-    };
-  }
-
-  // Detect framework
-  const framework = detectFramework(content);
-  if (!framework) {
-    return {
-      verdict: "unverifiable",
-      reason_code: "framework_unsupported",
-      evidence: [
-        {
-          kind: "symbol",
-          path: target.path,
-          note: "no recognized framework import found in file",
-        },
-      ],
-    };
-  }
-
-  // Parse with ts-morph (syntactic only, no TypeChecker)
-  let sourceFile;
-  try {
-    const project = new Project({ useInMemoryFileSystem: true, skipAddingFilesFromTsConfig: true });
-    sourceFile = project.createSourceFile(target.path, content);
-  } catch (err) {
-    return {
-      verdict: "unverifiable",
-      reason_code: "parse_error",
-      evidence: [
-        {
-          kind: "symbol",
-          path: target.path,
-          note: `parse error: ${String(err)}`,
-        },
-      ],
-    };
-  }
-
-  // Collect middleware/guard chain
-  const chain = collectChain(sourceFile, framework, target.symbol);
-
-  return computeVerdictFromChain(chain, target.path, target.symbol);
 }

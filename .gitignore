@@ -1,6 +1,9 @@
 node_modules/
 dist/
-.changeset/*.md
 *.tsbuildinfo
 coverage/
 .env
+.package.json.dev
+packages/cli/grammars/
+packages/cli/*.tgz
+attest-SPEC.md

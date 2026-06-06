@@ -292,6 +292,8 @@ function rawNodeChain(sourceFile: SourceFile, method: string, path: string): Cha
 
 // ─── Main chain collection ─────────────────────────────────────────────────
 
+export type { ChainEntry } from "./types.js";
+
 export function collectChain(
   sourceFile: SourceFile,
   framework: KnownFramework,

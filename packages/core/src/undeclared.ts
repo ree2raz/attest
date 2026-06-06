@@ -1,105 +1,97 @@
-import { SyntaxKind, type SourceFile } from "ts-morph";
-import type { UndeclaredFinding } from "./types.js";
-import type { Manifest } from "@attest/schema";
+import { diffSymbols } from "@attest/symbols";
+import { isKnownClaim } from "@attest/schema";
+import type { Claim, Manifest, UndeclaredChange } from "@attest/schema";
+import type { ParsedDiff } from "@attest/diff";
+import { isAllowlisted, isTestFile } from "./config.js";
+import type { Sources } from "./sources.js";
+import type { AttestConfig } from "./types.js";
 
 /**
- * Computes file-level undeclared changes.
+ * Undeclared-change detection — the moat (SPEC §6.3).
  *
- * undeclared_files = (diff_paths ∪ files_touched) − declared_files
+ * Walks the diff in order so the output mirrors the diff's file order. For each
+ * changed file:
+ *  - declared file  → emit intra-file symbol drift (added/modified symbols not
+ *                     named by a claim for that path);
+ *  - undeclared file → emit one file-level entry (suppressed if allowlisted).
  *
- * Using the union closes the omission vector: a file in the diff but absent
- * from files_touched is still surfaced.
+ * `declared = declared_scope.files ∪ { every claim's path }`.
  */
-export function computeUndeclaredFiles(
-  diffPaths: ReadonlySet<string>,
-  filesTouched: readonly string[],
-  declaredFiles: ReadonlySet<string>,
-): string[] {
-  const union = new Set([...diffPaths, ...filesTouched]);
-  return [...union].filter((p) => !declaredFiles.has(p)).sort();
-}
+export async function detectUndeclared(
+  manifest: Manifest,
+  diff: ParsedDiff,
+  sources: Sources,
+  config?: AttestConfig,
+): Promise<UndeclaredChange[]> {
+  const declaredFiles = collectDeclaredFiles(manifest);
+  const claimedSymbolsByPath = collectClaimedSymbols(manifest.claims);
 
-/**
- * Extracts all top-level declaration names from a SourceFile (syntactic, no TypeChecker).
- * Exported for testing.
- */
-export function extractTopLevelNames(sourceFile: SourceFile): string[] {
-  const names = new Set<string>();
+  const out: UndeclaredChange[] = [];
 
-  // Function declarations
-  for (const fn of sourceFile.getFunctions()) {
-    const name = fn.getName();
-    if (name) names.add(name);
-  }
+  for (const file of diff.files) {
+    if (declaredFiles.has(file.path)) {
+      // A declared test file's added test functions are expected, not scope drift —
+      // skip intra-file drift for it (its file-level change is already declared).
+      if (isTestFile(file.path, config)) continue;
 
-  // Class declarations
-  for (const cls of sourceFile.getClasses()) {
-    const name = cls.getName();
-    if (name) names.add(name);
-  }
+      // Intra-file symbol drift for an otherwise-declared file.
+      const base = await sources.baseSymbols(file.path);
+      const post = await sources.postSymbols(file.path);
+      const delta = diffSymbols(base, post);
+      const claimed = claimedSymbolsByPath.get(file.path) ?? new Set<string>();
 
-  // Interfaces
-  for (const iface of sourceFile.getInterfaces()) {
-    names.add(iface.getName());
-  }
-
-  // Type aliases
-  for (const ta of sourceFile.getTypeAliases()) {
-    names.add(ta.getName());
-  }
-
-  // Enums
-  for (const en of sourceFile.getEnums()) {
-    names.add(en.getName());
-  }
-
-  // Module-scope variable declarations (only direct children of SourceFile)
-  for (const stmt of sourceFile.getVariableStatements()) {
-    // Only include module-level statements (parent is the SourceFile)
-    if (stmt.getParent() !== sourceFile) continue;
-    for (const decl of stmt.getDeclarations()) {
-      names.add(decl.getName());
+      for (const decl of [...delta.added, ...delta.modified]) {
+        if (claimed.has(decl.name)) continue;
+        out.push({
+          path: file.path,
+          op: file.op,
+          granularity: "symbol",
+          severity: "flag",
+          symbol: decl.name,
+          symbol_kind: decl.kind,
+        });
+      }
+    } else {
+      out.push({
+        path: file.path,
+        op: file.op,
+        granularity: "file",
+        severity: isAllowlisted(file.path, config) ? "suppressed" : "flag",
+      });
     }
   }
 
-  // Namespace / module declarations at top level
-  for (const ns of sourceFile.getDescendantsOfKind(SyntaxKind.ModuleDeclaration)) {
-    if (ns.getParent() === sourceFile) {
-      names.add(ns.getName());
-    }
-  }
-
-  return [...names];
+  return out;
 }
 
-/**
- * Computes symbol-level undeclared changes for a single file.
- *
- * @param sourceFile   Parsed post-diff source file
- * @param path         Relative path (used in UndeclaredFinding)
- * @param coveredSymbols  Set of symbols named in claims targeting this file
- */
-export function computeUndeclaredSymbols(
-  sourceFile: SourceFile,
-  path: string,
-  coveredSymbols: ReadonlySet<string>,
-): UndeclaredFinding[] {
-  const topLevelNames = extractTopLevelNames(sourceFile);
-  return topLevelNames
-    .filter((name) => !coveredSymbols.has(name))
-    .sort()
-    .map((symbol) => ({ type: "symbol" as const, path, symbol }));
-}
-
-/**
- * Builds the full covered-symbol set for a given file path by scanning manifest claims.
- * For endpoint claims ("METHOD /path"), the route string is used as-is.
- */
-export function buildCoveredSymbolSet(manifest: Manifest, filePath: string): Set<string> {
-  const covered = new Set<string>();
+function collectDeclaredFiles(manifest: Manifest): Set<string> {
+  const files = new Set<string>(manifest.declared_scope.files);
   for (const claim of manifest.claims) {
-    if (claim.target.path !== filePath) continue;
-    if (claim.target.symbol) covered.add(claim.target.symbol);
+    const path = claimPath(claim);
+    if (path) files.add(path);
   }
-  return covered;
+  return files;
+}
+
+function collectClaimedSymbols(claims: Claim[]): Map<string, Set<string>> {
+  const byPath = new Map<string, Set<string>>();
+  for (const claim of claims) {
+    if (!isKnownClaim(claim)) continue;
+    if (
+      claim.kind !== "symbol_added" &&
+      claim.kind !== "symbol_removed" &&
+      claim.kind !== "symbol_modified"
+    ) {
+      continue;
+    }
+    const set = byPath.get(claim.path) ?? new Set<string>();
+    set.add(claim.symbol);
+    byPath.set(claim.path, set);
+  }
+  return byPath;
+}
+
+/** The path a claim references, if any (`outcome` claims have none). */
+function claimPath(claim: Claim): string | null {
+  return "path" in claim && typeof claim.path === "string" ? claim.path : null;
 }

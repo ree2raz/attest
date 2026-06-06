@@ -1,122 +1,94 @@
-import type { VerdictReport, ClaimResult } from "@attest/core";
+import type { Verdict, ClaimResult, UndeclaredChange } from "@attest/schema";
 import type { Manifest } from "@attest/schema";
 
-// ─── ANSI helpers ─────────────────────────────────────────────────────────
-
-type Color = "green" | "red" | "yellow" | "cyan" | "reset";
-
-const ANSI: Record<Color, string> = {
+const C = {
   green: "\x1b[32m",
   red: "\x1b[31m",
   yellow: "\x1b[33m",
   cyan: "\x1b[36m",
+  bold: "\x1b[1m",
   reset: "\x1b[0m",
-};
+} as const;
 
-function colorize(text: string, color: Color, useColor: boolean): string {
-  if (!useColor) return text;
-  return `${ANSI[color]}${text}${ANSI.reset}`;
+function col(s: string, code: string, use: boolean): string {
+  return use ? `${code}${s}${C.reset}` : s;
 }
 
-// ─── Icon + color per verdict ──────────────────────────────────────────────
+function claimLine(r: ClaimResult, manifest: Manifest, useColor: boolean): string {
+  const claim = manifest.claims.find((c) => c.id === r.id);
+  const kindStr = claim ? claim.kind : r.id;
 
-const VERDICT_ICON: Record<string, string> = {
-  verified: "✅",
-  unverified: "❌",
-  partial: "⚠️",
-  unverifiable: "ⓘ",
-};
+  let detail = "";
+  if (claim) {
+    if ("path" in claim && "op" in claim) detail = `${claim.op}  ${claim.path}`;
+    else if ("symbol" in claim && "path" in claim && "symbol_kind" in claim)
+      detail = `${claim.symbol} (${claim.symbol_kind})  ${claim.path}`;
+    else if ("path" in claim && "covers" in claim)
+      detail = `${claim.path}${claim.covers ? `  covers: ${claim.covers}` : ""}`;
+    else if ("path" in claim) detail = String(claim.path);
+    else if ("check" in claim) detail = String(claim.check);
+  }
 
-const VERDICT_COLOR: Record<string, Color> = {
-  verified: "green",
-  unverified: "red",
-  partial: "yellow",
-  unverifiable: "cyan",
-};
+  let icon: string;
+  if (r.status === "verified") icon = col("✓", C.green, useColor);
+  else if (r.status === "failed") icon = col("✗", C.red, useColor);
+  else icon = col("~", C.cyan, useColor);
 
-// ─── Evidence summarization (§5.3) ────────────────────────────────────────
+  const tail =
+    r.status !== "verified" && r.reason
+      ? col(`  → ${r.reason}`, r.status === "failed" ? C.red : C.cyan, useColor)
+      : "";
 
-function humanizeCode(code: string): string {
-  return code.replace(/_/g, " ");
+  return `  ${icon} ${r.id}  ${kindStr}  ${detail}${tail}`;
 }
 
-function evidenceSummary(claim: ClaimResult, manifest: Manifest): string {
-  // Rule 1: first evidence entry with a non-empty note
-  for (const ev of claim.evidence) {
-    if (ev.note && ev.note.trim()) {
-      const note = ev.note.length > 120 ? ev.note.slice(0, 120) : ev.note;
-      return note;
-    }
-  }
-
-  // Rule 2: reason_code present
-  if (claim.reason_code) {
-    const mc = manifest.claims.find((c) => c.id === claim.claim_id);
-    const target = mc?.target;
-    const location = target ? `${target.path}:${target.symbol ?? target.kind}` : claim.claim_id;
-    return `${humanizeCode(claim.reason_code)} at ${location}`;
-  }
-
-  // Rule 3: fallback from target
-  const mc = manifest.claims.find((c) => c.id === claim.claim_id);
-  const target = mc?.target;
-  if (target) {
-    return `${target.kind} ${target.symbol ?? ""} in ${target.path}`.trim();
-  }
-
-  return `claim ${claim.claim_id}`;
+function undeclaredLine(u: UndeclaredChange, useColor: boolean): string {
+  const icon = col("⚠", C.yellow, useColor);
+  const sym = u.symbol ? `  symbol ${u.symbol} (${u.symbol_kind ?? "?"})` : "";
+  return `  ${icon} ${u.path}${sym}  [${u.severity}]`;
 }
 
-// reviewer_focus reasons are now produced by the core's buildReviewerFocus
-// using spec §5.1 templates — the human renderer uses them verbatim.
-
-// ─── Main renderer ─────────────────────────────────────────────────────────
-
-export function renderHuman(report: VerdictReport, manifest: Manifest, useColor: boolean): string {
+export function renderHuman(verdict: Verdict, manifest: Manifest, useColor: boolean): string {
   const lines: string[] = [];
-  const { session, task } = manifest;
 
-  // Header
-  lines.push(
-    `🤖 Agent: ${session.agent} (${session.model}) · ${session.tool_calls_count} tool calls · ${session.files_touched.length} files touched`,
-  );
-  lines.push(`📝 Task: ${task.summary}`);
+  const agentStr = [manifest.agent.id, manifest.agent.model].filter(Boolean).join(" · ");
+  const toolCalls =
+    manifest.agent.tool_calls !== undefined ? `, ${manifest.agent.tool_calls} tool calls` : "";
+
+  lines.push(col(`attest v${verdict.attest_version}`, C.bold, useColor));
+  lines.push(`Task: ${manifest.task.id}  —  ${manifest.task.description}`);
+  lines.push(`Agent: ${agentStr}${toolCalls}`);
   lines.push("");
 
-  // Declared changes
-  lines.push(`📋 Declared changes (${report.claims.length}):`);
-  for (const claim of report.claims) {
-    const icon = VERDICT_ICON[claim.verdict] ?? "?";
-    const coloredIcon = colorize(icon, VERDICT_COLOR[claim.verdict] ?? "reset", useColor);
-    const summary = evidenceSummary(claim, manifest);
-    lines.push(`  ${coloredIcon} ${claim.claim_id}  ${summary}`);
+  // Claims
+  lines.push(`Claims (${verdict.claims.length}):`);
+  for (const r of verdict.claims) {
+    lines.push(claimLine(r, manifest, useColor));
   }
 
-  // Undeclared modifications (omit if empty)
-  if (report.undeclared.length > 0) {
+  // Undeclared changes
+  const flagged = verdict.undeclared_changes.filter((u) => u.severity === "flag");
+  const suppressed = verdict.undeclared_changes.filter((u) => u.severity === "suppressed");
+  if (verdict.undeclared_changes.length > 0) {
     lines.push("");
-    lines.push(`⚠️ Undeclared modifications (${report.undeclared.length}):`);
-    for (const u of report.undeclared) {
-      if (u.type === "symbol") {
-        lines.push(`  • ${u.path} — symbol \`${u.symbol}\` modified but not in any claim`);
-      } else {
-        lines.push(`  • ${u.path} — file modified but not in any claim`);
-      }
+    const suppressedNote = suppressed.length > 0 ? `, ${suppressed.length} suppressed` : "";
+    lines.push(`Undeclared changes (${flagged.length} flagged${suppressedNote}):`);
+    for (const u of verdict.undeclared_changes) {
+      lines.push(undeclaredLine(u, useColor));
     }
   }
 
-  // Reviewer focus (omit only when every claim verified AND no undeclared)
-  const allVerified = report.claims.every((c) => c.verdict === "verified");
-  const noUndeclared = report.undeclared.length === 0;
-  if (!(allVerified && noUndeclared)) {
-    lines.push("");
-    lines.push("🔍 Reviewer focus:");
-    let i = 1;
-    for (const item of report.reviewer_focus) {
-      lines.push(`  ${i}. ${item.reason}`);
-      i++;
-    }
-  }
+  // Summary
+  lines.push("");
+  const s = verdict.summary;
+  lines.push(
+    `Summary: ${s.verified} verified · ${s.failed} failed · ${s.unverifiable} unverifiable · ${s.undeclared} undeclared`,
+  );
 
-  return lines.join("\n") + "\n";
+  const resultStr =
+    verdict.result === "pass" ? col("PASS", C.green, useColor) : col("FAIL", C.red, useColor);
+  lines.push(`Result: ${resultStr}`);
+  lines.push("");
+
+  return lines.join("\n");
 }

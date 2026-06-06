@@ -1,0 +1,4 @@
+{
+  "test_cmd": "npm install --silent --no-audit --no-fund && npx -- vitest run --reporter=basic",
+  "build_cmd": "npm install --silent --no-audit --no-fund && npm run build"
+}

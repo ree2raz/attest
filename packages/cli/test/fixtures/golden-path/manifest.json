@@ -1,48 +1,17 @@
 {
-  "schema_version": "0.1",
-  "session": {
-    "agent": "claude-code",
-    "model": "claude-opus-4-7",
-    "session_id": "b3a1c0e2-9e2f-4e6a-8d13-1f2a3b4c5d6e",
-    "started_at": "2026-04-19T12:34:56Z",
-    "completed_at": "2026-04-19T12:41:22Z",
-    "prompt_hash": "sha256:a3f1c2e4b5d6f7a8c9e0b1d2f3a4c5e6b7d8f9a0c1e2b3d4f5a6c7e8b9d0f1a2",
-    "tool_calls_count": 5,
-    "files_touched": ["src/routes/auth.ts"]
-  },
-  "task": {
-    "summary": "Add login endpoint",
-    "source": "user_prompt"
-  },
+  "attest_version": "1.0",
+  "task": { "id": "add-login", "description": "Add login function to auth module" },
+  "agent": { "id": "claude-code", "model": "claude-opus-4-8", "tool_calls": 3 },
+  "generated_at": "2026-06-05T00:00:00Z",
+  "declared_scope": { "files": ["src/auth.ts"] },
   "claims": [
-    {
-      "id": "c1",
-      "type": "add_symbol",
-      "target": {
-        "kind": "endpoint",
-        "path": "src/routes/auth.ts",
-        "symbol": "POST /login"
-      },
-      "description": "Added POST /login endpoint",
-      "verification_contract": {
-        "check": "symbol_exists"
-      }
-    },
+    { "id": "c1", "kind": "file_change", "op": "modify", "path": "src/auth.ts" },
     {
       "id": "c2",
-      "type": "modify_behavior",
-      "target": {
-        "kind": "endpoint",
-        "path": "src/routes/auth.ts",
-        "symbol": "POST /login"
-      },
-      "description": "Login endpoint is protected by authentication",
-      "verification_contract": {
-        "check": "behavior_present",
-        "params": {
-          "property": "authentication"
-        }
-      }
+      "kind": "symbol_added",
+      "path": "src/auth.ts",
+      "symbol": "login",
+      "symbol_kind": "function"
     }
   ]
 }

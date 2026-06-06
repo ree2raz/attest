@@ -6,7 +6,7 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "moduleResolution": "bundler",
-    "module": "ES2022",
+    "module": "esnext",
     "target": "ES2022",
     "lib": ["ES2022"],
     "types": ["node"],

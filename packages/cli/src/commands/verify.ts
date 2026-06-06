@@ -1,18 +1,30 @@
 import { Command, Option } from "clipanion";
 import { readFile, access } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import { constants } from "node:fs";
 import { resolve, isAbsolute } from "node:path";
-import { text } from "node:stream/consumers";
-import { createValidator } from "@attest/schema";
-import { verify, parseDiffContent } from "@attest/core";
-import { registerDetectors } from "@attest/detectors-ts";
+import { createManifestValidator, formatValidationErrors } from "@attest/schema";
+import { parseDiff } from "@attest/diff";
+import { verify } from "@attest/core";
+import { runOutcomes } from "@attest/runner";
 import { renderHuman } from "../render/human.js";
 import { renderJson } from "../render/json.js";
+import { loadConfig } from "../config.js";
 
-// Exit codes per spec
+// Exit code contract (MVP §done-gate 4):
+//   0  pass
+//   1  verification fail (claims failed, undeclared changes, etc. — see SPEC §6.6)
+//   2  manifest is structurally malformed — distinct from verification fail so CI
+//      signals stay meaningful: 2 means "the manifest is bad, don't even look at
+//      the diff"; 1 means "the diff doesn't match the manifest".
+//   65 EX_DATAERR — input is parseable but the file format is wrong (e.g. JSON
+//      parse error)
+//   66 EX_NOINPUT — required file is missing
+//   70 EX_INTERNAL — internal software error
 const EX_DATAERR = 65;
 const EX_NOINPUT = 66;
 const EX_INTERNAL = 70;
+const EX_MANIFEST_INVALID = 2;
 
 export class VerifyCommand extends Command {
   static override paths = [["verify"]];
@@ -21,7 +33,8 @@ export class VerifyCommand extends Command {
     description: "Verify an agent manifest against a diff",
     examples: [
       ["Verify using files", "attest verify --manifest manifest.json --diff changes.diff"],
-      ["Verify with stdin diff", "attest verify --manifest manifest.json --diff -"],
+      ["Diff from stdin", "attest verify --manifest manifest.json --diff -"],
+      ["Default diff (git diff HEAD)", "attest verify --manifest manifest.json --repo-root ."],
     ],
   });
 
@@ -29,129 +42,141 @@ export class VerifyCommand extends Command {
     required: true,
     description: "Path to manifest JSON",
   });
+
   diff = Option.String("--diff,-d", {
-    required: true,
-    description: "Path to unified diff file, or - for stdin",
+    required: false,
+    description: "Path to unified diff, or - for stdin. Defaults to git diff HEAD.",
   });
+
   repoRoot = Option.String("--repo-root,-r", {
     required: false,
     description: "Repository root (default: cwd)",
   });
-  format = Option.String("--format,-f", "human", { description: "Output format: human or json" });
+
+  format = Option.String("--format,-f", "human", {
+    description: "Output format: human or json",
+  });
+
   noColor = Option.Boolean("--no-color", false, { description: "Disable ANSI color" });
-  verbose = Option.Boolean("--verbose,-v", false, { description: "Verbose stderr output" });
 
   override async execute(): Promise<number> {
-    const { stderr: out } = this.context;
+    const { stderr } = this.context;
 
-    // ── Resolve repo root ────────────────────────────────────────────────
+    // ── Resolve repo root ────────────────────────────────────────────────────
     const repoRoot = this.repoRoot ? resolve(this.repoRoot) : process.cwd();
-
     try {
       await access(repoRoot, constants.R_OK);
     } catch {
-      out.write(`error: repo-root not found: ${repoRoot}\n`);
+      stderr.write(`error: repo-root not found: ${repoRoot}\n`);
       return EX_NOINPUT;
     }
 
-    // ── Read manifest ────────────────────────────────────────────────────
+    // ── Read manifest ────────────────────────────────────────────────────────
     const manifestPath = isAbsolute(this.manifest) ? this.manifest : resolve(this.manifest);
-
-    let manifestRawBytes: Buffer;
+    let manifestRaw: string;
     try {
-      manifestRawBytes = await readFile(manifestPath);
+      manifestRaw = await readFile(manifestPath, "utf-8");
     } catch {
-      out.write(`error: manifest not found: ${manifestPath}\n`);
+      stderr.write(`error: manifest not found: ${manifestPath}\n`);
       return EX_NOINPUT;
     }
 
     let manifestObj: unknown;
     try {
-      manifestObj = JSON.parse(manifestRawBytes.toString("utf-8"));
+      manifestObj = JSON.parse(manifestRaw);
     } catch (e) {
-      out.write(`error: manifest JSON parse error: ${String(e)}\n`);
+      stderr.write(`error: manifest JSON parse error: ${String(e)}\n`);
       return EX_DATAERR;
     }
 
-    // Validate manifest schema
-    const validator = createValidator();
-    const result = validator.validate(manifestObj);
-    if (!result.ok) {
-      for (const err of result.errors) {
-        out.write(`${err.instancePath}: ${err.keyword}: ${err.message}\n`);
+    const validator = createManifestValidator();
+    const validation = validator.validate(manifestObj);
+    if (!validation.ok) {
+      const lines = formatValidationErrors(validation.errors);
+      stderr.write(
+        `error: manifest is structurally invalid (${lines.length} issue${lines.length === 1 ? "" : "s"})\n`,
+      );
+      for (const line of lines) {
+        stderr.write(`  ${line}\n`);
       }
-      return 2;
+      return EX_MANIFEST_INVALID;
     }
-    const manifest = result.manifest;
+    const manifestData = validation.value;
 
-    // ── Read diff ────────────────────────────────────────────────────────
+    // ── Read diff ────────────────────────────────────────────────────────────
     let diffText: string;
-    if (this.diff === "-") {
+    if (!this.diff) {
       try {
-        diffText = await text(process.stdin);
+        diffText = execFileSync("git", ["diff", "HEAD"], { cwd: repoRoot, encoding: "utf8" });
       } catch (e) {
-        out.write(`error: failed to read diff from stdin: ${String(e)}\n`);
-        return EX_DATAERR;
+        stderr.write(`error: could not run git diff HEAD: ${String(e)}\n`);
+        return EX_INTERNAL;
       }
+    } else if (this.diff === "-") {
+      const chunks: Buffer[] = [];
+      for await (const chunk of process.stdin) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string));
+      }
+      diffText = Buffer.concat(chunks).toString("utf-8");
     } else {
       const diffPath = isAbsolute(this.diff) ? this.diff : resolve(this.diff);
       try {
         diffText = await readFile(diffPath, "utf-8");
       } catch {
-        out.write(`error: diff file not found: ${diffPath}\n`);
+        stderr.write(`error: diff file not found: ${diffPath}\n`);
         return EX_NOINPUT;
       }
     }
 
-    const diffSet = parseDiffContent(diffText);
-    if (diffSet.changes.length === 0) {
-      out.write("error: diff contains no changes\n");
-      return EX_DATAERR;
-    }
+    const parsedDiff = parseDiff(diffText);
 
-    // ── Run verifier ─────────────────────────────────────────────────────
-    const detectors = registerDetectors();
-    if (this.verbose) {
-      for (const d of detectors) {
-        out.write(`verbose: registered detector: ${d.id}\n`);
+    // ── Load config ──────────────────────────────────────────────────────────
+    const { attestConfig, runnerConfig } = await loadConfig(repoRoot);
+
+    // ── Run outcome checks (if any outcome claims exist) ─────────────────────
+    const outcomeChecks = manifestData.claims
+      .filter((c): c is typeof c & { kind: "outcome"; check: string } => c.kind === "outcome")
+      .map((c) => c.check as Parameters<typeof runOutcomes>[0]["checks"][number]);
+
+    let outcomes: Awaited<ReturnType<typeof runOutcomes>> | undefined;
+    if (outcomeChecks.length > 0) {
+      try {
+        outcomes = await runOutcomes({
+          repoRoot,
+          checks: outcomeChecks,
+          ...(diffText ? { diffText } : {}),
+          ...(runnerConfig ? { config: runnerConfig } : {}),
+        });
+      } catch (e) {
+        stderr.write(`warning: runner error (outcomes will be unverifiable): ${String(e)}\n`);
       }
     }
 
-    let report;
+    // ── Verify ───────────────────────────────────────────────────────────────
+    let verdict;
     try {
-      report = await verify({
-        manifest,
-        manifestRawBytes: new Uint8Array(manifestRawBytes),
-        diff: diffSet,
+      verdict = await verify({
+        manifest: manifestData,
+        diff: parsedDiff,
         repoRoot,
-        detectors,
+        ...(attestConfig ? { config: attestConfig } : {}),
+        ...(outcomes ? { outcomes } : {}),
       });
     } catch (e) {
-      out.write(`error: internal verifier error: ${String(e)}\n`);
+      stderr.write(`error: verification failed: ${String(e)}\n`);
       return EX_INTERNAL;
     }
 
-    // ── Render output ─────────────────────────────────────────────────────
+    // ── Render ───────────────────────────────────────────────────────────────
     const useColor =
       !this.noColor &&
       !process.env["NO_COLOR"] &&
-      this.context.stdout.hasColors !== undefined &&
       (this.context.stdout as NodeJS.WriteStream).isTTY === true;
 
-    let output: string;
-    if (this.format === "json") {
-      output = renderJson(report);
-    } else {
-      output = renderHuman(report, manifest, useColor);
-    }
+    const output =
+      this.format === "json" ? renderJson(verdict) : renderHuman(verdict, manifestData, useColor);
 
     this.context.stdout.write(output);
-
-    // ── Exit code ─────────────────────────────────────────────────────────
-    const hasIssues =
-      report.claims.some((c) => c.verdict === "unverified" || c.verdict === "partial") ||
-      report.undeclared.length > 0;
-
-    return hasIssues ? 1 : 0;
+    return verdict.exit_code;
   }
 }
